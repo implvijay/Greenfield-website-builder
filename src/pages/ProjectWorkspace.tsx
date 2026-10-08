@@ -6,6 +6,10 @@ import { industries } from '../data/industries';
 import { getThemeTokens } from '../data/themes';
 import { Page, Section, Menu, MenuItem, DesignTokens, AnimationSettings } from '../types';
 import { v4 as uuid } from 'uuid';
+import { MediaLibrary } from '../components/MediaLibrary';
+import { FormBuilder } from '../components/FormBuilder';
+import { AnalyticsConfig } from '../components/AnalyticsConfig';
+import { BlogManager } from '../components/BlogManager';
 import {
   LayoutDashboard, FileText, Paintbrush, Menu as MenuIcon, Image, Search,
   BarChart3, Eye, History, Download, Settings, Plus, Trash2, Copy,
@@ -14,7 +18,7 @@ import {
   Star, Zap, Globe, Share2, Code, FileCode, Package
 } from 'lucide-react';
 
-type WorkspaceTab = 'overview' | 'pages' | 'builder' | 'menus' | 'media' | 'seo' | 'forms' | 'analytics' | 'preview' | 'versions' | 'export';
+type WorkspaceTab = 'overview' | 'pages' | 'builder' | 'menus' | 'media' | 'seo' | 'forms' | 'analytics' | 'blog' | 'preview' | 'versions' | 'export';
 
 export function ProjectWorkspace() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -42,7 +46,11 @@ export function ProjectWorkspace() {
     { id: 'pages', label: 'Pages', icon: FileText },
     { id: 'builder', label: 'Builder', icon: Paintbrush },
     { id: 'menus', label: 'Menus', icon: MenuIcon },
+    { id: 'media', label: 'Media', icon: Image },
     { id: 'seo', label: 'SEO', icon: Search },
+    { id: 'forms', label: 'Forms', icon: FileText },
+    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+    { id: 'blog', label: 'Blog', icon: FileText },
     { id: 'preview', label: 'Preview', icon: Eye },
     { id: 'versions', label: 'Versions', icon: History },
     { id: 'export', label: 'Export', icon: Download },
@@ -96,7 +104,11 @@ export function ProjectWorkspace() {
           {activeTab === 'pages' && <PagesTab project={project} updateProject={updateProject} notify={notify} />}
           {activeTab === 'builder' && <BuilderTab project={project} updateProject={updateProject} tokens={tokens} notify={notify} />}
           {activeTab === 'menus' && <MenusTab project={project} updateProject={updateProject} notify={notify} />}
+          {activeTab === 'media' && <MediaLibrary project={project} updateProject={updateProject} notify={notify} />}
           {activeTab === 'seo' && <SEOTab project={project} updateProject={updateProject} notify={notify} />}
+          {activeTab === 'forms' && <FormBuilder project={project} updateProject={updateProject} notify={notify} />}
+          {activeTab === 'analytics' && <AnalyticsConfig project={project} updateProject={updateProject} notify={notify} />}
+          {activeTab === 'blog' && <BlogManager project={project} updateProject={updateProject} notify={notify} />}
           {activeTab === 'preview' && <PreviewTab project={project} tokens={tokens} />}
           {activeTab === 'versions' && <VersionsTab project={project} createVersion={createVersion} restoreVersion={restoreVersion} notify={notify} />}
           {activeTab === 'export' && <ExportTab project={project} notify={notify} />}
@@ -1216,155 +1228,57 @@ function VersionsTab({ project, createVersion, restoreVersion, notify }: { proje
 function ExportTab({ project, notify }: { project: any; notify: any }) {
   const [exporting, setExporting] = useState<string | null>(null);
 
-  const generateStaticHTML = (): string => {
-    const tokens = getThemeTokens(project.themeId, project.themeVariant);
-    const pages = project.pages.filter((p: Page) => p.status === 'published');
-    const primaryMenu = project.menus.find((m: Menu) => m.location === 'primary');
-    const footerMenu = project.menus.find((m: Menu) => m.location === 'footer');
-
-    const renderMenuItems = (items: MenuItem[]): string =>
-      items.filter(i => i.enabled).map(item => {
-        const href = item.type === 'url' ? item.target : `/${item.pageId ? project.pages.find((p: Page) => p.id === item.pageId)?.slug || '#' : '#'}`;
-        return `<li><a href="${href}">${item.label}</a>${item.children.length ? `<ul>${renderMenuItems(item.children)}</ul>` : ''}</li>`;
-      }).join('');
-
-    const renderSection = (section: Section): string => {
-      const bgStyle = section.settings.background === 'gradient'
-        ? `background: linear-gradient(135deg, ${tokens.colors.primary}, ${tokens.colors.primaryDark});`
-        : `background-color: ${tokens.colors.background};`;
-      const textColor = section.settings.background === 'gradient' ? '#ffffff' : tokens.colors.text;
-
-      let content = '';
-      section.rows.forEach(row => {
-        content += '<div class="row" style="display:flex;flex-wrap:wrap;gap:' + (row.gap || tokens.spacing.gap) + '">';
-        row.columns.forEach(col => {
-          content += `<div style="width:${col.width}%;min-width:250px">`;
-          col.components.forEach(comp => {
-            content += renderComponent(comp, tokens, textColor);
-          });
-          content += '</div>';
-        });
-        content += '</div>';
-      });
-
-      return `<section style="${bgStyle}padding:${section.settings.padding || '3rem 1.5rem'}"><div style="max-width:${tokens.spacing.container};margin:0 auto">${content}</div></section>`;
-    };
-
-    const renderComponent = (comp: any, tokens: DesignTokens, textColor: string): string => {
-      switch (comp.type) {
-        case 'heading':
-          const sizes: Record<string, string> = { '5xl': '3rem', '4xl': '2.5rem', '3xl': '2rem', '2xl': '1.5rem' };
-          return `<h${comp.props.level || 2} style="font-family:${tokens.typography.headingFont};font-weight:${tokens.typography.headingWeight};font-size:${sizes[comp.props.size] || '2rem'};color:${textColor};margin-bottom:0.75rem;line-height:1.2">${comp.props.text}</h${comp.props.level || 2}>`;
-        case 'paragraph':
-          return `<p style="font-family:${tokens.typography.bodyFont};color:${textColor};opacity:0.85;line-height:${tokens.typography.lineHeight};margin-bottom:1rem;max-width:600px;margin-left:auto;margin-right:auto">${comp.props.text}</p>`;
-        case 'button-group':
-          return `<div style="display:flex;gap:0.75rem;justify-content:center;margin-top:1rem">${(comp.props.buttons || []).map((b: any) => `<a href="#" style="padding:0.75rem 1.5rem;border-radius:${tokens.borderRadius};font-weight:600;font-size:0.9rem;text-decoration:none;${b.variant === 'primary' ? `background:${tokens.colors.primary};color:#fff` : `border:2px solid ${textColor}30;color:${textColor}`}">${b.label}</a>`).join('')}</div>`;
-        case 'image':
-          return comp.props.src ? `<img src="${comp.props.src}" alt="${comp.props.alt || ''}" style="width:100%;border-radius:${tokens.borderRadius}" />` : '';
-        default:
-          return '';
-      }
-    };
-
-    const renderPage = (page: Page): string => {
-      const sections = page.sections.map(renderSection).join('\n');
-      return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${page.seo.title || page.title + ' | ' + project.seo.siteTitle}</title>
-  <meta name="description" content="${page.seo.description || project.seo.description}">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: ${tokens.typography.bodyFont}; color: ${tokens.colors.text}; line-height: ${tokens.typography.lineHeight}; }
-    a { color: inherit; }
-    ul { list-style: none; }
-    nav ul { display: flex; gap: 1.5rem; }
-    footer nav ul { flex-direction: column; gap: 0.25rem; }
-    @media (max-width: 768px) { nav ul { display: none; } .row > div { width: 100% !important; } }
-  </style>
-</head>
-<body>
-  <header style="background:${tokens.colors.background};border-bottom:1px solid ${tokens.colors.border};padding:1rem 1.5rem">
-    <div style="max-width:${tokens.spacing.container};margin:0 auto;display:flex;align-items:center;justify-content:space-between">
-      <a href="/" style="font-weight:700;font-size:1.25rem;color:${tokens.colors.primary};text-decoration:none">${project.seo.siteTitle || project.name}</a>
-      <nav><ul>${primaryMenu ? renderMenuItems(primaryMenu.items) : ''}</ul></nav>
-    </div>
-  </header>
-  <main>${sections}</main>
-  <footer style="background:${tokens.colors.surface};border-top:1px solid ${tokens.colors.border};padding:2rem 1.5rem">
-    <div style="max-width:${tokens.spacing.container};margin:0 auto;text-align:center">
-      <p style="font-size:0.8rem;color:${tokens.colors.textMuted}">&copy; ${new Date().getFullYear()} ${project.seo.siteTitle || project.name}. All rights reserved.</p>
-    </div>
-  </footer>
-</body>
-</html>`;
-    };
-
-    // Return the home page as the main export
-    const homePage = pages.find((p: Page) => p.type === 'home') || pages[0];
-    return homePage ? renderPage(homePage) : '<html><body><h1>No pages</h1></body></html>';
-  };
-
   const handleExport = async (type: 'static' | 'laravel' | 'react') => {
     setExporting(type);
-    // Simulate export processing
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
-    if (type === 'static') {
-      const html = generateStaticHTML();
-      const blob = new Blob([html], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${project.name.replace(/\s+/g, '-').toLowerCase()}-index.html`;
-      a.click();
-      URL.revokeObjectURL(url);
-      notify('success', 'Static HTML exported successfully');
-    } else if (type === 'laravel') {
-      // Generate Laravel project structure as a readme
-      const content = `# ${project.name} - Laravel 12 Export\n\nGenerated by GREENFIELD Website Factory\n\n## Structure\n- app/Http/Controllers/\n- resources/views/layouts/\n- resources/views/pages/\n- resources/views/components/\n- public/css/\n- public/js/\n- routes/web.php\n\n## Pages\n${project.pages.map((p: Page) => `- ${p.title} (/${p.slug})`).join('\n')}\n\n## Setup\n1. composer install\n2. npm install\n3. cp .env.example .env\n4. php artisan key:generate\n5. php artisan serve`;
+    try {
+      const { generateStaticSite, generateLaravelProject, generateReactProject } = await import('../services/exporter');
+      let files: Record<string, string> = {};
+
+      if (type === 'static') {
+        files = generateStaticSite(project);
+      } else if (type === 'laravel') {
+        files = generateLaravelProject(project);
+      } else {
+        files = generateReactProject(project);
+      }
+
+      // Download the primary file (index.html for static, README for others)
+      const primaryFile = type === 'static' ? 'index.html' : 'README.md';
+      const content = files[primaryFile] || Object.values(files)[0] || '';
       const blob = new Blob([content], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${project.name.replace(/\s+/g, '-').toLowerCase()}-laravel-README.md`;
+      a.download = `${project.name.replace(/\s+/g, '-').toLowerCase()}-${primaryFile}`;
       a.click();
       URL.revokeObjectURL(url);
-      // Also export the HTML
-      const html = generateStaticHTML();
-      const htmlBlob = new Blob([html], { type: 'text/html' });
-      const htmlUrl = URL.createObjectURL(htmlBlob);
-      const htmlA = document.createElement('a');
-      htmlA.href = htmlUrl;
-      htmlA.download = `${project.name.replace(/\s+/g, '-').toLowerCase()}-layout.blade.php`;
-      htmlA.click();
-      URL.revokeObjectURL(htmlUrl);
-      notify('success', 'Laravel export files downloaded');
-    } else {
-      // React export
-      const content = `# ${project.name} - React/Node Export\n\nGenerated by GREENFIELD Website Factory\n\n## Tech Stack\n- React 18 + TypeScript\n- Vite\n- Node.js + Express\n\n## Pages\n${project.pages.map((p: Page) => `- ${p.title} → /${p.slug}`).join('\n')}\n\n## Setup\n1. npm install\n2. npm run dev\n3. Build: npm run build`;
-      const blob = new Blob([content], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${project.name.replace(/\s+/g, '-').toLowerCase()}-react-README.md`;
-      a.click();
-      URL.revokeObjectURL(url);
-      const html = generateStaticHTML();
-      const htmlBlob = new Blob([html], { type: 'text/html' });
-      const htmlUrl = URL.createObjectURL(htmlBlob);
-      const htmlA = document.createElement('a');
-      htmlA.href = htmlUrl;
-      htmlA.download = `${project.name.replace(/\s+/g, '-').toLowerCase()}-App.tsx`;
-      htmlA.click();
-      URL.revokeObjectURL(htmlUrl);
-      notify('success', 'React/Node export files downloaded');
+
+      // Download additional key files
+      const keyFiles = Object.keys(files).filter(f => f !== primaryFile && (f.endsWith('.html') || f.endsWith('.php') || f.endsWith('.tsx') || f.endsWith('.json') || f === 'sitemap.xml' || f === 'robots.txt'));
+      for (const file of keyFiles.slice(0, 5)) {
+        await new Promise(r => setTimeout(r, 200));
+        const fileBlob = new Blob([files[file]], { type: 'text/plain' });
+        const fileUrl = URL.createObjectURL(fileBlob);
+        const fileA = document.createElement('a');
+        fileA.href = fileUrl;
+        fileA.download = `${project.name.replace(/\s+/g, '-').toLowerCase()}-${file.replace(/\//g, '-')}`;
+        fileA.click();
+        URL.revokeObjectURL(fileUrl);
+      }
+
+      notify('success', `${type} export complete - ${Object.keys(files).length} files generated`);
+    } catch (err) {
+      notify('error', `Export failed: ${err}`);
     }
 
     setExporting(null);
   };
+
+  // Export rendering handled by services/exporter.ts
+
+  // (old renderComponent removed - handled by exporter.ts)
 
   return (
     <div className="p-8">
