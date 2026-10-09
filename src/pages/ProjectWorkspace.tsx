@@ -6,6 +6,7 @@ import { industries } from '../data/industries';
 import { getThemeTokens } from '../data/themes';
 import { Page, Section, Menu, MenuItem, DesignTokens, AnimationSettings } from '../types';
 import { v4 as uuid } from 'uuid';
+import React from 'react';
 import { MediaLibrary } from '../components/MediaLibrary';
 import { FormBuilder } from '../components/FormBuilder';
 import { AnalyticsConfig } from '../components/AnalyticsConfig';
@@ -14,6 +15,12 @@ import { SectionSettingsPanel } from '../components/SectionSettingsPanel';
 import { AnimationSettingsPanel } from '../components/AnimationSettingsPanel';
 import { QuickActionsPanel } from '../components/QuickActionsPanel';
 import { BuilderStatusBar } from '../components/BuilderStatusBar';
+import { HistoryManager } from '../services/history';
+import { AutoSaveManager } from '../services/autoSave';
+import { KeyboardShortcutManager, createBuilderShortcuts } from '../services/keyboardShortcuts';
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, useDraggable, useDroppable } from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
+import { Undo, Redo } from 'lucide-react';
 import {
   LayoutDashboard, FileText, Paintbrush, Menu as MenuIcon, Image, Search,
   BarChart3, Eye, History, Download, Settings, Plus, Trash2, Copy,
@@ -23,6 +30,32 @@ import {
 } from 'lucide-react';
 
 type WorkspaceTab = 'overview' | 'pages' | 'builder' | 'menus' | 'media' | 'seo' | 'forms' | 'analytics' | 'blog' | 'preview' | 'versions' | 'export';
+
+// Draggable Section Component
+function DraggableSection({ id, children, isSelected, onClick }: { id: string; children: React.ReactNode; isSelected: boolean; onClick: () => void }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id,
+  });
+
+  const style = transform ? {
+    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+  } : undefined;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`group relative bg-white rounded-lg border-2 transition-all ${
+        isDragging ? 'opacity-50 shadow-2xl' : ''
+      } ${isSelected ? 'border-indigo-500 shadow-lg' : 'border-transparent hover:border-slate-300'}`}
+      onClick={onClick}
+      {...listeners}
+      {...attributes}
+    >
+      {children}
+    </div>
+  );
+}
 
 export function ProjectWorkspace() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -336,9 +369,52 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
   const [showQuickActions, setShowQuickActions] = useState(false);
   const [lastSaved, setLastSaved] = useState<string>(new Date().toISOString());
   const [isSaving, setIsSaving] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [historyState, setHistoryState] = useState(0); // Force re-render on undo/redo
+
+  // Initialize managers
+  const historyManager = React.useMemo(() => new HistoryManager(project.pages), []);
+  const autoSaveManager = React.useMemo(
+    () => new AutoSaveManager(() => {
+      setIsSaving(true);
+      setTimeout(() => {
+        setLastSaved(new Date().toISOString());
+        setIsSaving(false);
+      }, 500);
+    }, 2000),
+    []
+  );
+  const keyboardManager = React.useMemo(() => new KeyboardShortcutManager(), []);
 
   const page = project.pages.find((p: Page) => p.id === selectedPageId);
   if (!page) return <div className="p-8 text-center text-slate-500">No page selected</div>;
+
+  // Helper to update pages and push to history
+  const updatePages = (newPages: Page[], action: string = 'Update') => {
+    historyManager.push(newPages, action);
+    updateProject({ ...project, pages: newPages });
+    autoSaveManager.trigger();
+    setHistoryState(prev => prev + 1);
+  };
+
+  // Undo/Redo handlers
+  const handleUndo = () => {
+    const previousPages = historyManager.undo();
+    if (previousPages) {
+      updateProject({ ...project, pages: previousPages });
+      setHistoryState(prev => prev + 1);
+      notify('info', 'Undone');
+    }
+  };
+
+  const handleRedo = () => {
+    const nextPages = historyManager.redo();
+    if (nextPages) {
+      updateProject({ ...project, pages: nextPages });
+      setHistoryState(prev => prev + 1);
+      notify('info', 'Redone');
+    }
+  };
 
   const addSection = (type: string) => {
     const newSection: Section = {
@@ -362,7 +438,7 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
     const updatedPages = project.pages.map((p: Page) =>
       p.id === selectedPageId ? { ...p, sections: [...p.sections, newSection] } : p
     );
-    updateProject({ ...project, pages: updatedPages });
+    updatePages(updatedPages, 'Add Section');
     setShowAddSection(false);
     notify('success', 'Section added');
   };
@@ -371,7 +447,7 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
     const updatedPages = project.pages.map((p: Page) =>
       p.id === selectedPageId ? { ...p, sections: p.sections.filter(s => s.id !== sectionId) } : p
     );
-    updateProject({ ...project, pages: updatedPages });
+    updatePages(updatedPages, 'Delete Section');
     if (selectedSectionId === sectionId) setSelectedSectionId(null);
     notify('success', 'Section removed');
   };
@@ -381,7 +457,7 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
     const updatedPages = project.pages.map((p: Page) =>
       p.id === selectedPageId ? { ...p, sections: [...p.sections, newSection] } : p
     );
-    updateProject({ ...project, pages: updatedPages });
+    updatePages(updatedPages, 'Duplicate Section');
     notify('success', 'Section duplicated');
   };
 
@@ -393,7 +469,7 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
     const updatedPages = project.pages.map((p: Page) =>
       p.id === selectedPageId ? { ...p, sections } : p
     );
-    updateProject({ ...project, pages: updatedPages });
+    updatePages(updatedPages, 'Move Section');
   };
 
   const updateComponent = (sectionId: string, rowId: string, colId: string, compId: string, newProps: any) => {
@@ -424,7 +500,7 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
         }),
       };
     });
-    updateProject({ ...project, pages: updatedPages });
+    updatePages(updatedPages, 'Update Component');
   };
 
   // Panel handlers
@@ -439,8 +515,7 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
         }),
       };
     });
-    updateProject({ ...project, pages: updatedPages });
-    setLastSaved(new Date().toISOString());
+    updatePages(updatedPages, 'Update Section Settings');
   };
 
   const handleUpdateAnimation = (sectionId: string, animation: AnimationSettings | undefined) => {
@@ -454,8 +529,7 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
         }),
       };
     });
-    updateProject({ ...project, pages: updatedPages });
-    setLastSaved(new Date().toISOString());
+    updatePages(updatedPages, 'Update Animation');
   };
 
   const handleToggleVisibility = (sectionId: string) => {
@@ -469,8 +543,33 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
         }),
       };
     });
-    updateProject({ ...project, pages: updatedPages });
-    setLastSaved(new Date().toISOString());
+    updatePages(updatedPages, 'Toggle Visibility');
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = page.sections.findIndex((s: Section) => s.id === active.id);
+    const newIndex = page.sections.findIndex((s: Section) => s.id === over.id);
+
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const newSections = [...page.sections];
+    const [movedSection] = newSections.splice(oldIndex, 1);
+    newSections.splice(newIndex, 0, movedSection);
+
+    const updatedPages = project.pages.map((p: Page) =>
+      p.id === selectedPageId ? { ...p, sections: newSections } : p
+    );
+    updatePages(updatedPages, 'Reorder Sections');
   };
 
   const deviceWidths = { desktop: '100%', tablet: '768px', mobile: '375px' };
@@ -588,7 +687,7 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
       const updatedPages = project.pages.map((p: Page) =>
         p.id === selectedPageId ? { ...p, sections: newSections } : p
       );
-      updateProject({ ...project, pages: updatedPages });
+      updatePages(updatedPages, 'AI Generate Content');
       notify('success', 'AI content generated successfully');
     } catch (err) {
       notify('error', `AI generation failed: ${err}`);
@@ -618,6 +717,26 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
 
         <div className="flex-1" />
 
+        {/* Undo/Redo Buttons */}
+        <div className="flex items-center gap-1 border-l border-slate-200 pl-3">
+          <button
+            onClick={handleUndo}
+            disabled={!historyManager.canUndo()}
+            className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            title="Undo (Ctrl+Z)"
+          >
+            <Undo size={16} />
+          </button>
+          <button
+            onClick={handleRedo}
+            disabled={!historyManager.canRedo()}
+            className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            title="Redo (Ctrl+Y)"
+          >
+            <Redo size={16} />
+          </button>
+        </div>
+
         <button
           onClick={generateAIContent}
           disabled={generatingAI}
@@ -645,15 +764,10 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
               </button>
             </div>
           ) : (
-            <div className="space-y-2">
-              {page.sections.map((section: Section, index: number) => (
-                <div
-                  key={section.id}
-                  className={`group relative bg-white rounded-lg border-2 transition-all ${
-                    selectedSectionId === section.id ? 'border-indigo-500 shadow-lg' : 'border-transparent hover:border-slate-300'
-                  }`}
-                  onClick={() => setSelectedSectionId(section.id)}
-                >
+            <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+              <div className="space-y-2">
+                {page.sections.map((section: Section, index: number) => (
+                <DraggableSection key={section.id} id={section.id} isSelected={selectedSectionId === section.id} onClick={() => setSelectedSectionId(section.id)}>
                   {/* Section Controls */}
                   <div className="absolute -top-3 left-2 z-10 hidden group-hover:flex items-center gap-1 bg-white rounded-md shadow-md border border-slate-200 px-1 py-0.5">
                     <span className="text-[10px] font-medium text-slate-500 px-1 capitalize">{section.type}</span>
@@ -668,9 +782,10 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
 
                   {/* Section Content */}
                   <SectionRenderer section={section} tokens={tokens} editable={true} onUpdate={(rowId, colId, compId, newProps) => updateComponent(section.id, rowId, colId, compId, newProps)} />
-                </div>
+                </DraggableSection>
               ))}
-            </div>
+              </div>
+            </DndContext>
           )}
         </div>
       </div>
