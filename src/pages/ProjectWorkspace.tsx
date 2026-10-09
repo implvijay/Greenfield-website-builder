@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useStore } from '../store';
 import { AppLayout, Breadcrumbs } from '../components/Layout';
@@ -22,22 +22,31 @@ type WorkspaceTab = 'overview' | 'pages' | 'builder' | 'menus' | 'media' | 'seo'
 
 export function ProjectWorkspace() {
   const { projectId } = useParams<{ projectId: string }>();
-  const { state, currentProject, updateProject, notify, createVersion, restoreVersion } = useStore();
+  const { state, updateProject, notify, createVersion, restoreVersion, setCurrentProject } = useStore();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('overview');
 
-  if (!currentProject || currentProject.id !== projectId) {
+  // Look up project directly from state.projects using URL param
+  const project = state.projects.find(p => p.id === projectId);
+
+  // Set currentProjectId when component mounts or projectId changes
+  useEffect(() => {
+    if (projectId && state.currentProjectId !== projectId) {
+      setCurrentProject(projectId);
+    }
+  }, [projectId, state.currentProjectId, setCurrentProject]);
+
+  if (!project) {
     return (
       <AppLayout>
         <div className="p-8 text-center">
           <h2 className="text-xl font-semibold text-slate-900 mb-2">Project not found</h2>
+          <p className="text-slate-500 mb-4">The project you're looking for doesn't exist or has been deleted.</p>
           <Link to="/projects" className="text-indigo-600 hover:text-indigo-700">Back to projects</Link>
         </div>
       </AppLayout>
     );
   }
-
-  const project = currentProject;
   const tokens = getThemeTokens(project.themeId, project.themeVariant);
   const industry = industries.find(i => i.id === project.industry);
 

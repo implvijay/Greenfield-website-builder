@@ -9,7 +9,7 @@ import { v4 as uuid } from 'uuid';
 import { Plus, Search, Filter, MoreVertical, Trash2, Copy, Archive, Eye } from 'lucide-react';
 
 export function ProjectsPage() {
-  const { state, createProject, deleteProject, notify } = useStore();
+  const { state, createProject, deleteProject, notify, setCurrentProject } = useStore();
   const [showCreate, setShowCreate] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -23,6 +23,7 @@ export function ProjectsPage() {
 
   const handleCreate = (project: Project) => {
     createProject(project);
+    setCurrentProject(project.id);
     notify('success', `Project "${project.name}" created successfully`);
     setShowCreate(false);
     navigate(`/projects/${project.id}`);
@@ -101,7 +102,7 @@ export function ProjectsPage() {
                         {industry?.icon || '🌐'}
                       </div>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => navigate(`/projects/${project.id}`)} className="p-1.5 text-slate-400 hover:text-indigo-600 rounded" title="Open">
+                        <button onClick={() => { setCurrentProject(project.id); navigate(`/projects/${project.id}`); }} className="p-1.5 text-slate-400 hover:text-indigo-600 rounded" title="Open">
                           <Eye size={14} />
                         </button>
                         <button onClick={() => handleDelete(project.id, project.name)} className="p-1.5 text-slate-400 hover:text-red-500 rounded" title="Delete">
@@ -109,7 +110,7 @@ export function ProjectsPage() {
                         </button>
                       </div>
                     </div>
-                    <Link to={`/projects/${project.id}`} className="block">
+                    <Link to={`/projects/${project.id}`} onClick={() => setCurrentProject(project.id)} className="block">
                       <h3 className="font-semibold text-slate-900 mb-1 hover:text-indigo-600">{project.name}</h3>
                       <p className="text-sm text-slate-500 mb-3">{project.customer}</p>
                     </Link>

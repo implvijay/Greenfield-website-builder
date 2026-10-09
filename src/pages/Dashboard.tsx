@@ -5,7 +5,7 @@ import { FolderOpen, Plus, Clock, CheckCircle, FileText, TrendingUp } from 'luci
 import { industries } from '../data/industries';
 
 export function DashboardPage() {
-  const { state } = useStore();
+  const { state, setCurrentProject } = useStore();
   const projects = state.projects;
   const recentProjects = [...projects].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()).slice(0, 5);
   const drafts = projects.filter(p => p.status === 'draft');
@@ -66,6 +66,7 @@ export function DashboardPage() {
                   <Link
                     key={project.id}
                     to={`/projects/${project.id}`}
+                    onClick={() => setCurrentProject(project.id)}
                     className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50 transition-colors"
                   >
                     <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center text-xl">

@@ -111,6 +111,7 @@ function loadFromStorage(): Partial<AppState> {
       return {
         user: parsed.user || null,
         projects: parsed.projects || [],
+        currentProjectId: parsed.currentProjectId || null,
         exportJobs: parsed.exportJobs || [],
       };
     }
@@ -123,6 +124,7 @@ function saveToStorage(state: AppState) {
     const data = {
       user: state.user,
       projects: state.projects,
+      currentProjectId: state.currentProjectId,
       exportJobs: state.exportJobs,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
