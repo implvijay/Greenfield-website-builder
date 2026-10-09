@@ -15,9 +15,10 @@ import { SectionSettingsPanel } from '../components/SectionSettingsPanel';
 import { AnimationSettingsPanel } from '../components/AnimationSettingsPanel';
 import { QuickActionsPanel } from '../components/QuickActionsPanel';
 import { BuilderStatusBar } from '../components/BuilderStatusBar';
+import { ComponentLibrary } from '../components/ComponentLibrary';
 import { HistoryManager } from '../services/history';
-import { AutoSaveManager } from '../services/autoSave';
 import { KeyboardShortcutManager, createBuilderShortcuts } from '../services/keyboardShortcuts';
+import { AutoSaveManager } from '../services/autoSave';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, useDraggable, useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { Undo, Redo } from 'lucide-react';
@@ -367,6 +368,7 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
   const [showAnimationPanel, setShowAnimationPanel] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(false);
+  const [showComponentLibrary, setShowComponentLibrary] = useState(false);
   const [lastSaved, setLastSaved] = useState<string>(new Date().toISOString());
   const [isSaving, setIsSaving] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -388,6 +390,37 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
 
   const page = project.pages.find((p: Page) => p.id === selectedPageId);
   if (!page) return <div className="p-8 text-center text-slate-500">No page selected</div>;
+
+  // Set up keyboard shortcuts
+  useEffect(() => {
+    const shortcuts = createBuilderShortcuts(
+      handleUndo,
+      handleRedo,
+      () => {
+        updateProject(project);
+        notify('success', 'Project saved');
+      },
+      () => {
+        if (selectedSectionId) {
+          const section = page.sections.find((s: Section) => s.id === selectedSectionId);
+          if (section) duplicateSection(section);
+        }
+      },
+      () => {
+        if (selectedSectionId) {
+          deleteSection(selectedSectionId);
+        }
+      },
+      () => setShowAddSection(true)
+    );
+
+    shortcuts.forEach(shortcut => keyboardManager.register(shortcut));
+
+    return () => {
+      keyboardManager.destroy();
+      autoSaveManager.destroy();
+    };
+  }, [selectedSectionId, page]);
 
   // Helper to update pages and push to history
   const updatePages = (newPages: Page[], action: string = 'Update') => {
@@ -572,6 +605,98 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
     updatePages(updatedPages, 'Reorder Sections');
   };
 
+  // Component library handler
+  const handleComponentSelect = (componentType: string) => {
+    if (!selectedSectionId) {
+      notify('error', 'Please select a section first');
+      return;
+    }
+
+    // Create default props based on component type
+    const getDefaultProps = (type: string) => {
+      switch (type) {
+        case 'heading':
+          return { text: 'New Heading', level: 2, size: '2xl' };
+        case 'paragraph':
+          return { text: 'This is a new paragraph. Click to edit.' };
+        case 'text':
+          return { text: 'Multi-line text block content goes here.' };
+        case 'image':
+          return { src: '', alt: 'Image description' };
+        case 'video':
+          return { src: '', title: 'Video title' };
+        case 'button':
+          return { text: 'Click Me', variant: 'primary', url: '#' };
+        case 'button-group':
+          return { buttons: [{ text: 'Button 1', variant: 'primary' }, { text: 'Button 2', variant: 'outline' }] };
+        case 'card':
+          return { title: 'Card Title', description: 'Card description goes here.' };
+        case 'stat':
+          return { value: '0', label: 'Statistic Label' };
+        case 'list':
+          return { items: ['Item 1', 'Item 2', 'Item 3'], ordered: false };
+        case 'badge':
+          return { text: 'Badge', variant: 'default' };
+        case 'gallery':
+          return { images: [] };
+        case 'logo-cloud':
+          return { logos: [] };
+        default:
+          return {};
+      }
+    };
+
+    const newComponent = {
+      id: uuid(),
+      type: componentType,
+      props: getDefaultProps(componentType),
+    };
+
+    const updatedPages = project.pages.map((p: Page) => {
+      if (p.id !== selectedPageId) return p;
+      return {
+        ...p,
+        sections: p.sections.map((s: Section) => {
+          if (s.id !== selectedSectionId) return s;
+          // Add component to the first column of the first row
+          if (s.rows.length === 0) {
+            return {
+              ...s,
+              rows: [{
+                id: uuid(),
+                columns: [{
+                  id: uuid(),
+                  width: 100,
+                  components: [newComponent],
+                }],
+              }],
+            };
+          }
+          return {
+            ...s,
+            rows: s.rows.map((r, idx) => {
+              if (idx === 0 && r.columns.length > 0) {
+                return {
+                  ...r,
+                  columns: r.columns.map((c, cIdx) => {
+                    if (cIdx === 0) {
+                      return { ...c, components: [...c.components, newComponent] };
+                    }
+                    return c;
+                  }),
+                };
+              }
+              return r;
+            }),
+          };
+        }),
+      };
+    });
+
+    updatePages(updatedPages, `Add ${componentType} Component`);
+    notify('success', `${componentType} component added`);
+  };
+
   const deviceWidths = { desktop: '100%', tablet: '768px', mobile: '375px' };
 
   const sectionTypes = [
@@ -746,6 +871,15 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
           <Zap size={14} /> {generatingAI ? 'Generating...' : 'AI Content'}
         </button>
 
+        <button
+          onClick={() => setShowComponentLibrary(true)}
+          disabled={!selectedSectionId}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          title={selectedSectionId ? 'Add component to selected section' : 'Select a section first'}
+        >
+          <Package size={14} /> Components
+        </button>
+
         <button onClick={() => setShowAddSection(true)} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg">
           <Plus size={14} /> Add Section
         </button>
@@ -813,6 +947,13 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
           </div>
         </div>
       )}
+
+      {/* Component Library Modal */}
+      <ComponentLibrary
+        isOpen={showComponentLibrary}
+        onClose={() => setShowComponentLibrary(false)}
+        onSelect={handleComponentSelect}
+      />
 
       {/* Settings Panel */}
       {showSettingsPanel && selectedSectionId && (
