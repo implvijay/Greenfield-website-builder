@@ -317,6 +317,7 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
   const [device, setDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [showAddSection, setShowAddSection] = useState(false);
+  const [generatingAI, setGeneratingAI] = useState(false);
 
   const page = project.pages.find((p: Page) => p.id === selectedPageId);
   if (!page) return <div className="p-8 text-center text-slate-500">No page selected</div>;
@@ -429,6 +430,108 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
     { type: 'process', label: 'Process', icon: '🔄' },
   ];
 
+  const generateAIContent = async () => {
+    if (!page) return;
+    setGeneratingAI(true);
+    try {
+      const { aiProvider } = await import('../services/ai');
+      const content = await aiProvider.generatePageContent(project.industry, page.type, project.seo.siteTitle || project.name);
+
+      // Generate sections from AI content
+      const newSections: Section[] = content.sections.map(sectionContent => {
+        const section: Section = {
+          id: uuid(),
+          type: sectionContent.type as any,
+          variant: 'default',
+          settings: { padding: '4rem 0', textAlign: 'center' },
+          rows: [{
+            id: uuid(),
+            columns: [{
+              id: uuid(),
+              width: 100,
+              components: [],
+            }],
+          }],
+          animation: { type: 'fade', duration: 600, delay: 0 },
+        };
+
+        // Add heading
+        if (sectionContent.heading) {
+          section.rows[0].columns[0].components.push({
+            id: uuid(),
+            type: 'heading',
+            props: { text: sectionContent.heading, level: 2, size: '3xl' },
+          });
+        }
+
+        // Add content/items
+        if (sectionContent.items && sectionContent.items.length > 0) {
+          if (sectionContent.type === 'services' || sectionContent.type === 'cards') {
+            section.rows[0].columns[0].components.push({
+              id: uuid(),
+              type: 'card',
+              props: { cards: sectionContent.items.map(item => ({ title: item.title, description: item.description, icon: item.icon || '⭐' })) },
+            });
+          } else if (sectionContent.type === 'statistics') {
+            section.rows[0].columns[0].components.push({
+              id: uuid(),
+              type: 'stat',
+              props: { stats: sectionContent.items.map(item => ({ value: item.title, label: item.description })) },
+            });
+          } else if (sectionContent.type === 'testimonials') {
+            section.rows[0].columns[0].components.push({
+              id: uuid(),
+              type: 'testimonial',
+              props: { testimonials: sectionContent.items.map(item => ({ name: item.title, role: '', text: item.description })) },
+            });
+          }
+        } else if (sectionContent.content) {
+          section.rows[0].columns[0].components.push({
+            id: uuid(),
+            type: 'paragraph',
+            props: { text: sectionContent.content },
+          });
+        }
+
+        return section;
+      });
+
+      // Add hero section if content has hero title
+      if (content.heroTitle) {
+        const heroSection: Section = {
+          id: uuid(),
+          type: 'hero',
+          variant: 'default',
+          settings: { background: 'gradient', padding: '6rem 0', textAlign: 'center', fullWidth: true },
+          rows: [{
+            id: uuid(),
+            columns: [{
+              id: uuid(),
+              width: 100,
+              components: [
+                { id: uuid(), type: 'heading', props: { text: content.heroTitle, level: 1, size: '5xl' } },
+                { id: uuid(), type: 'paragraph', props: { text: content.heroSubtitle || '' } },
+                { id: uuid(), type: 'button-group', props: { buttons: [{ label: 'Get Started', variant: 'primary' }, { label: 'Learn More', variant: 'outline' }] } },
+              ],
+            }],
+          }],
+          animation: { type: 'fade', duration: 800, delay: 0 },
+        };
+        newSections.unshift(heroSection);
+      }
+
+      // Update page with new sections
+      const updatedPages = project.pages.map((p: Page) =>
+        p.id === selectedPageId ? { ...p, sections: newSections } : p
+      );
+      updateProject({ ...project, pages: updatedPages });
+      notify('success', 'AI content generated successfully');
+    } catch (err) {
+      notify('error', `AI generation failed: ${err}`);
+    }
+    setGeneratingAI(false);
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Builder Toolbar */}
@@ -450,6 +553,15 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
         </div>
 
         <div className="flex-1" />
+
+        <button
+          onClick={generateAIContent}
+          disabled={generatingAI}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg disabled:opacity-50"
+          title="Generate AI content for this page"
+        >
+          <Zap size={14} /> {generatingAI ? 'Generating...' : 'AI Content'}
+        </button>
 
         <button onClick={() => setShowAddSection(true)} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg">
           <Plus size={14} /> Add Section
@@ -1227,13 +1339,22 @@ function VersionsTab({ project, createVersion, restoreVersion, notify }: { proje
 // EXPORT TAB
 function ExportTab({ project, notify }: { project: any; notify: any }) {
   const [exporting, setExporting] = useState<string | null>(null);
+  const [showValidation, setShowValidation] = useState(false);
+  const [validationResult, setValidationResult] = useState<any>(null);
+
+  const handleValidate = async () => {
+    const { validateProjectForExport } = await import('../services/validation');
+    const result = validateProjectForExport(project);
+    setValidationResult(result);
+    setShowValidation(true);
+  };
 
   const handleExport = async (type: 'static' | 'laravel' | 'react') => {
     setExporting(type);
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     try {
-      const { generateStaticSite, generateLaravelProject, generateReactProject } = await import('../services/exporter');
+      const { generateStaticSite, generateLaravelProject, generateReactProject, generateZip, downloadZip } = await import('../services/exporter');
       let files: Record<string, string> = {};
 
       if (type === 'static') {
@@ -1244,31 +1365,12 @@ function ExportTab({ project, notify }: { project: any; notify: any }) {
         files = generateReactProject(project);
       }
 
-      // Download the primary file (index.html for static, README for others)
-      const primaryFile = type === 'static' ? 'index.html' : 'README.md';
-      const content = files[primaryFile] || Object.values(files)[0] || '';
-      const blob = new Blob([content], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${project.name.replace(/\s+/g, '-').toLowerCase()}-${primaryFile}`;
-      a.click();
-      URL.revokeObjectURL(url);
+      // Generate ZIP file
+      const zipBlob = await generateZip(files, project.name);
+      const filename = `${project.name.replace(/\s+/g, '-').toLowerCase()}-${type}.zip`;
+      downloadZip(zipBlob, filename);
 
-      // Download additional key files
-      const keyFiles = Object.keys(files).filter(f => f !== primaryFile && (f.endsWith('.html') || f.endsWith('.php') || f.endsWith('.tsx') || f.endsWith('.json') || f === 'sitemap.xml' || f === 'robots.txt'));
-      for (const file of keyFiles.slice(0, 5)) {
-        await new Promise(r => setTimeout(r, 200));
-        const fileBlob = new Blob([files[file]], { type: 'text/plain' });
-        const fileUrl = URL.createObjectURL(fileBlob);
-        const fileA = document.createElement('a');
-        fileA.href = fileUrl;
-        fileA.download = `${project.name.replace(/\s+/g, '-').toLowerCase()}-${file.replace(/\//g, '-')}`;
-        fileA.click();
-        URL.revokeObjectURL(fileUrl);
-      }
-
-      notify('success', `${type} export complete - ${Object.keys(files).length} files generated`);
+      notify('success', `${type} export complete - ${Object.keys(files).length} files packaged in ZIP`);
     } catch (err) {
       notify('error', `Export failed: ${err}`);
     }
@@ -1282,7 +1384,82 @@ function ExportTab({ project, notify }: { project: any; notify: any }) {
 
   return (
     <div className="p-8">
-      <h1 className="text-2xl font-bold text-slate-900 mb-6">Export Website</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-slate-900">Export Website</h1>
+        <button
+          onClick={handleValidate}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-lg"
+        >
+          <Check size={16} /> Validate Before Export
+        </button>
+      </div>
+
+      {/* Validation Modal */}
+      {showValidation && validationResult && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-auto">
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="font-semibold text-slate-900">Export Validation</h3>
+              <button onClick={() => setShowValidation(false)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+            </div>
+            <div className="p-5">
+              {/* Summary */}
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className={`p-4 rounded-lg ${validationResult.summary.errors > 0 ? 'bg-red-50' : 'bg-green-50'}`}>
+                  <p className="text-2xl font-bold">{validationResult.summary.errors}</p>
+                  <p className="text-sm text-slate-600">Errors</p>
+                </div>
+                <div className={`p-4 rounded-lg ${validationResult.summary.warnings > 0 ? 'bg-amber-50' : 'bg-green-50'}`}>
+                  <p className="text-2xl font-bold">{validationResult.summary.warnings}</p>
+                  <p className="text-sm text-slate-600">Warnings</p>
+                </div>
+                <div className="p-4 rounded-lg bg-blue-50">
+                  <p className="text-2xl font-bold">{validationResult.summary.info}</p>
+                  <p className="text-sm text-slate-600">Info</p>
+                </div>
+              </div>
+
+              {/* Status */}
+              <div className={`p-4 rounded-lg mb-4 ${validationResult.valid ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                <p className={`font-medium ${validationResult.valid ? 'text-green-800' : 'text-red-800'}`}>
+                  {validationResult.valid ? '✓ Project is ready for export' : '✗ Project has errors that must be fixed before export'}
+                </p>
+              </div>
+
+              {/* Issues */}
+              {validationResult.issues.length > 0 && (
+                <div className="space-y-2">
+                  {validationResult.issues.map((issue: any, i: number) => (
+                    <div key={i} className={`p-3 rounded-lg border ${
+                      issue.type === 'error' ? 'bg-red-50 border-red-200' :
+                      issue.type === 'warning' ? 'bg-amber-50 border-amber-200' :
+                      'bg-blue-50 border-blue-200'
+                    }`}>
+                      <div className="flex items-start gap-2">
+                        <span className="text-sm">
+                          {issue.type === 'error' ? '❌' : issue.type === 'warning' ? '⚠️' : 'ℹ️'}
+                        </span>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-slate-900">{issue.message}</p>
+                          {issue.fix && <p className="text-xs text-slate-600 mt-1">Fix: {issue.fix}</p>}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="p-5 border-t border-slate-100 flex justify-end">
+              <button
+                onClick={() => setShowValidation(false)}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Static Export */}

@@ -1,5 +1,6 @@
 import { Project, Page, Section, Menu, MenuItem, DesignTokens, Form, FormField } from '../types';
 import { getThemeTokens } from '../data/themes';
+import JSZip from 'jszip';
 
 // Static HTML Export - generates a complete multi-page site
 export function generateStaticSite(project: Project): Record<string, string> {
@@ -612,4 +613,35 @@ ${project.pages.filter(p => p.status === 'published').map(p => `- ${p.title} →
 
 function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// Generate ZIP file from exported files
+export async function generateZip(files: Record<string, string>, projectName: string): Promise<Blob> {
+  const zip = new JSZip();
+
+  // Add all files to the ZIP
+  Object.entries(files).forEach(([path, content]) => {
+    zip.file(path, content);
+  });
+
+  // Generate the ZIP blob
+  const blob = await zip.generateAsync({
+    type: 'blob',
+    compression: 'DEFLATE',
+    compressionOptions: { level: 9 },
+  });
+
+  return blob;
+}
+
+// Download ZIP file
+export function downloadZip(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
