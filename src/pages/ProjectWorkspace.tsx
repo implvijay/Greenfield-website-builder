@@ -16,6 +16,7 @@ import { AnimationSettingsPanel } from '../components/AnimationSettingsPanel';
 import { QuickActionsPanel } from '../components/QuickActionsPanel';
 import { BuilderStatusBar } from '../components/BuilderStatusBar';
 import { ComponentLibrary } from '../components/ComponentLibrary';
+import { ComponentPropertiesPanel } from '../components/ComponentPropertiesPanel';
 import { HistoryManager } from '../services/history';
 import { KeyboardShortcutManager, createBuilderShortcuts } from '../services/keyboardShortcuts';
 import { AutoSaveManager } from '../services/autoSave';
@@ -369,6 +370,8 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
   const [showAnimationPanel, setShowAnimationPanel] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(false);
   const [showComponentLibrary, setShowComponentLibrary] = useState(false);
+  const [selectedComponentId, setSelectedComponentId] = useState<string | null>(null);
+  const [showComponentProperties, setShowComponentProperties] = useState(false);
   const [lastSaved, setLastSaved] = useState<string>(new Date().toISOString());
   const [isSaving, setIsSaving] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -577,6 +580,31 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
       };
     });
     updatePages(updatedPages, 'Toggle Visibility');
+  };
+
+  // Component selection and property handlers
+  const handleComponentClick = (componentId: string) => {
+    setSelectedComponentId(componentId);
+    setShowComponentProperties(true);
+  };
+
+  const handleComponentPropertyUpdate = (newProps: any) => {
+    if (!selectedComponentId || !selectedSectionId) return;
+    
+    // Find the component in the current page
+    const section = page.sections.find((s: Section) => s.id === selectedSectionId);
+    if (!section) return;
+
+    // Find which row and column contains this component
+    for (const row of section.rows) {
+      for (const col of row.columns) {
+        const comp = col.components.find((c: any) => c.id === selectedComponentId);
+        if (comp) {
+          updateComponent(selectedSectionId, row.id, col.id, selectedComponentId, newProps);
+          return;
+        }
+      }
+    }
   };
 
   // Drag and drop handlers
@@ -915,7 +943,7 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
                   </div>
 
                   {/* Section Content */}
-                  <SectionRenderer section={section} tokens={tokens} editable={true} onUpdate={(rowId, colId, compId, newProps) => updateComponent(section.id, rowId, colId, compId, newProps)} />
+                  <SectionRenderer section={section} tokens={tokens} editable={true} onUpdate={(rowId, colId, compId, newProps) => updateComponent(section.id, rowId, colId, compId, newProps)} onComponentClick={handleComponentClick} />
                 </DraggableSection>
               ))}
               </div>
@@ -954,6 +982,37 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
         onClose={() => setShowComponentLibrary(false)}
         onSelect={handleComponentSelect}
       />
+
+      {/* Component Properties Panel */}
+      {showComponentProperties && selectedComponentId && selectedSectionId && (() => {
+        const section = page.sections.find((s: Section) => s.id === selectedSectionId);
+        if (!section) return null;
+        
+        let selectedComponent = null;
+        for (const row of section.rows) {
+          for (const col of row.columns) {
+            const comp = col.components.find((c: any) => c.id === selectedComponentId);
+            if (comp) {
+              selectedComponent = comp;
+              break;
+            }
+          }
+          if (selectedComponent) break;
+        }
+        
+        if (!selectedComponent) return null;
+        
+        return (
+          <ComponentPropertiesPanel
+            component={selectedComponent}
+            onUpdate={handleComponentPropertyUpdate}
+            onClose={() => {
+              setShowComponentProperties(false);
+              setSelectedComponentId(null);
+            }}
+          />
+        );
+      })()}
 
       {/* Settings Panel */}
       {showSettingsPanel && selectedSectionId && (
@@ -1014,7 +1073,7 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
 }
 
 // Section Renderer
-function SectionRenderer({ section, tokens, editable, onUpdate }: { section: Section; tokens: DesignTokens; editable?: boolean; onUpdate?: (rowId: string, colId: string, compId: string, props: any) => void }) {
+function SectionRenderer({ section, tokens, editable, onUpdate, onComponentClick }: { section: Section; tokens: DesignTokens; editable?: boolean; onUpdate?: (rowId: string, colId: string, compId: string, props: any) => void; onComponentClick?: (compId: string) => void }) {
   const bgStyle = section.settings.background === 'gradient'
     ? { background: `linear-gradient(135deg, ${tokens.colors.primary}, ${tokens.colors.primaryDark})` }
     : section.settings.backgroundImage
@@ -1031,14 +1090,24 @@ function SectionRenderer({ section, tokens, editable, onUpdate }: { section: Sec
             {row.columns.map(col => (
               <div key={col.id} style={{ width: `${col.width}%`, minWidth: col.width < 100 ? '250px' : '100%' }} className="flex-1">
                 {col.components.map(comp => (
-                  <ComponentRenderer
+                  <div
                     key={comp.id}
-                    component={comp}
-                    tokens={tokens}
-                    textColor={textColor}
-                    editable={editable}
-                    onUpdate={(newProps) => onUpdate?.(row.id, col.id, comp.id, newProps)}
-                  />
+                    onClick={(e) => {
+                      if (editable && onComponentClick) {
+                        e.stopPropagation();
+                        onComponentClick(comp.id);
+                      }
+                    }}
+                    className={editable ? 'cursor-pointer hover:ring-2 hover:ring-indigo-400 hover:ring-offset-2 rounded transition-all' : ''}
+                  >
+                    <ComponentRenderer
+                      component={comp}
+                      tokens={tokens}
+                      textColor={textColor}
+                      editable={editable}
+                      onUpdate={(newProps) => onUpdate?.(row.id, col.id, comp.id, newProps)}
+                    />
+                  </div>
                 ))}
               </div>
             ))}
