@@ -155,6 +155,7 @@ export interface SectionSettings {
   fullWidth?: boolean;
   textAlign?: 'left' | 'center' | 'right';
   customClass?: string;
+  visible?: boolean;
 }
 
 export interface Row {
@@ -186,7 +187,7 @@ export type ComponentType =
   | 'select' | 'checkbox' | 'radio' | 'form-field';
 
 export interface AnimationSettings {
-  type: 'none' | 'fade' | 'slide-up' | 'slide-left' | 'slide-right' | 'scale' | 'bounce';
+  type: 'none' | 'fade' | 'slide-up' | 'slide-down' | 'slide-left' | 'slide-right' | 'scale' | 'zoom-in' | 'zoom-out' | 'bounce' | 'shake';
   duration: number;
   delay: number;
 }

@@ -10,6 +10,10 @@ import { MediaLibrary } from '../components/MediaLibrary';
 import { FormBuilder } from '../components/FormBuilder';
 import { AnalyticsConfig } from '../components/AnalyticsConfig';
 import { BlogManager } from '../components/BlogManager';
+import { SectionSettingsPanel } from '../components/SectionSettingsPanel';
+import { AnimationSettingsPanel } from '../components/AnimationSettingsPanel';
+import { QuickActionsPanel } from '../components/QuickActionsPanel';
+import { BuilderStatusBar } from '../components/BuilderStatusBar';
 import {
   LayoutDashboard, FileText, Paintbrush, Menu as MenuIcon, Image, Search,
   BarChart3, Eye, History, Download, Settings, Plus, Trash2, Copy,
@@ -327,6 +331,11 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
   const [device, setDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [showAddSection, setShowAddSection] = useState(false);
   const [generatingAI, setGeneratingAI] = useState(false);
+  const [showSettingsPanel, setShowSettingsPanel] = useState(false);
+  const [showAnimationPanel, setShowAnimationPanel] = useState(false);
+  const [showQuickActions, setShowQuickActions] = useState(false);
+  const [lastSaved, setLastSaved] = useState<string>(new Date().toISOString());
+  const [isSaving, setIsSaving] = useState(false);
 
   const page = project.pages.find((p: Page) => p.id === selectedPageId);
   if (!page) return <div className="p-8 text-center text-slate-500">No page selected</div>;
@@ -416,6 +425,52 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
       };
     });
     updateProject({ ...project, pages: updatedPages });
+  };
+
+  // Panel handlers
+  const handleUpdateSectionSettings = (sectionId: string, settings: any) => {
+    const updatedPages = project.pages.map((p: Page) => {
+      if (p.id !== selectedPageId) return p;
+      return {
+        ...p,
+        sections: p.sections.map(s => {
+          if (s.id !== sectionId) return s;
+          return { ...s, settings: { ...s.settings, ...settings } };
+        }),
+      };
+    });
+    updateProject({ ...project, pages: updatedPages });
+    setLastSaved(new Date().toISOString());
+  };
+
+  const handleUpdateAnimation = (sectionId: string, animation: AnimationSettings | undefined) => {
+    const updatedPages = project.pages.map((p: Page) => {
+      if (p.id !== selectedPageId) return p;
+      return {
+        ...p,
+        sections: p.sections.map(s => {
+          if (s.id !== sectionId) return s;
+          return { ...s, animation };
+        }),
+      };
+    });
+    updateProject({ ...project, pages: updatedPages });
+    setLastSaved(new Date().toISOString());
+  };
+
+  const handleToggleVisibility = (sectionId: string) => {
+    const updatedPages = project.pages.map((p: Page) => {
+      if (p.id !== selectedPageId) return p;
+      return {
+        ...p,
+        sections: p.sections.map(s => {
+          if (s.id !== sectionId) return s;
+          return { ...s, settings: { ...s.settings, visible: s.settings.visible === false ? true : false } };
+        }),
+      };
+    });
+    updateProject({ ...project, pages: updatedPages });
+    setLastSaved(new Date().toISOString());
   };
 
   const deviceWidths = { desktop: '100%', tablet: '768px', mobile: '375px' };
@@ -604,6 +659,9 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
                     <span className="text-[10px] font-medium text-slate-500 px-1 capitalize">{section.type}</span>
                     <button onClick={(e) => { e.stopPropagation(); moveSection(index, 'up'); }} className="p-0.5 text-slate-400 hover:text-slate-700 text-[10px]">↑</button>
                     <button onClick={(e) => { e.stopPropagation(); moveSection(index, 'down'); }} className="p-0.5 text-slate-400 hover:text-slate-700 text-[10px]">↓</button>
+                    <button onClick={(e) => { e.stopPropagation(); setShowSettingsPanel(true); }} className="p-0.5 text-slate-400 hover:text-blue-600" title="Settings"><Settings size={10} /></button>
+                    <button onClick={(e) => { e.stopPropagation(); setShowAnimationPanel(true); }} className="p-0.5 text-slate-400 hover:text-purple-600" title="Animation"><Zap size={10} /></button>
+                    <button onClick={(e) => { e.stopPropagation(); setShowQuickActions(true); }} className="p-0.5 text-slate-400 hover:text-indigo-600" title="Quick Actions"><Star size={10} /></button>
                     <button onClick={(e) => { e.stopPropagation(); duplicateSection(section); }} className="p-0.5 text-slate-400 hover:text-indigo-600"><Copy size={10} /></button>
                     <button onClick={(e) => { e.stopPropagation(); deleteSection(section.id); }} className="p-0.5 text-slate-400 hover:text-red-500"><Trash2 size={10} /></button>
                   </div>
@@ -640,6 +698,61 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
           </div>
         </div>
       )}
+
+      {/* Settings Panel */}
+      {showSettingsPanel && selectedSectionId && (
+        <SectionSettingsPanel
+          section={page.sections.find((s: Section) => s.id === selectedSectionId)!}
+          onUpdate={(settings) => handleUpdateSectionSettings(selectedSectionId, settings)}
+          onClose={() => setShowSettingsPanel(false)}
+        />
+      )}
+
+      {/* Animation Panel */}
+      {showAnimationPanel && selectedSectionId && (
+        <AnimationSettingsPanel
+          section={page.sections.find((s: Section) => s.id === selectedSectionId)!}
+          onUpdate={(animation) => handleUpdateAnimation(selectedSectionId, animation)}
+          onClose={() => setShowAnimationPanel(false)}
+        />
+      )}
+
+      {/* Quick Actions Panel */}
+      {showQuickActions && selectedSectionId && (
+        <QuickActionsPanel
+          section={page.sections.find((s: Section) => s.id === selectedSectionId)!}
+          onDuplicate={() => {
+            const section = page.sections.find((s: Section) => s.id === selectedSectionId);
+            if (section) duplicateSection(section);
+          }}
+          onDelete={() => deleteSection(selectedSectionId)}
+          onMoveUp={() => {
+            const index = page.sections.findIndex((s: Section) => s.id === selectedSectionId);
+            if (index > 0) moveSection(index, 'up');
+          }}
+          onMoveDown={() => {
+            const index = page.sections.findIndex((s: Section) => s.id === selectedSectionId);
+            if (index < page.sections.length - 1) moveSection(index, 'down');
+          }}
+          onToggleVisibility={() => handleToggleVisibility(selectedSectionId)}
+          onOpenSettings={() => {
+            setShowQuickActions(false);
+            setShowSettingsPanel(true);
+          }}
+          onOpenAnimation={() => {
+            setShowQuickActions(false);
+            setShowAnimationPanel(true);
+          }}
+        />
+      )}
+
+      {/* Status Bar */}
+      <BuilderStatusBar
+        page={page}
+        lastSaved={lastSaved}
+        isSaving={isSaving}
+        sectionCount={page.sections.length}
+      />
     </div>
   );
 }
