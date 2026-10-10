@@ -20,6 +20,7 @@ import { ComponentPropertiesPanel } from '../components/ComponentPropertiesPanel
 import { GlobalSearch } from '../components/GlobalSearch';
 import { ComponentOperations } from '../components/ComponentOperations';
 import { ComponentTemplatesPanel } from '../components/ComponentTemplatesPanel';
+import { SectionTemplatesPanel } from '../components/SectionTemplatesPanel';
 import { HistoryManager } from '../services/history';
 import { KeyboardShortcutManager, createBuilderShortcuts } from '../services/keyboardShortcuts';
 import { AutoSaveManager } from '../services/autoSave';
@@ -378,6 +379,7 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
   const [showComponentProperties, setShowComponentProperties] = useState(false);
   const [showGlobalSearch, setShowGlobalSearch] = useState(false);
   const [showTemplatesPanel, setShowTemplatesPanel] = useState(false);
+  const [showSectionTemplatesPanel, setShowSectionTemplatesPanel] = useState(false);
   const [lastSaved, setLastSaved] = useState<string>(new Date().toISOString());
   const [isSaving, setIsSaving] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -880,6 +882,19 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
     notify('success', 'Template component inserted');
   };
 
+  const handleInsertSectionTemplate = (section: Section) => {
+    const updatedPages = project.pages.map((p: Page) => {
+      if (p.id !== selectedPageId) return p;
+      return {
+        ...p,
+        sections: [...p.sections, section],
+      };
+    });
+
+    updatePages(updatedPages, 'Insert Section Template');
+    notify('success', 'Section template inserted');
+  };
+
   // Drag and drop handlers
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
@@ -1198,6 +1213,14 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
           <Layers size={14} /> Templates
         </button>
 
+        <button
+          onClick={() => setShowSectionTemplatesPanel(true)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg"
+          title="Insert section template"
+        >
+          <Layers size={14} /> Section Templates
+        </button>
+
         <div className="flex items-center gap-1 border-l border-slate-200 pl-3">
           <button
             onClick={handleCopyComponent}
@@ -1320,6 +1343,14 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
           }
           return undefined;
         })() : undefined}
+      />
+
+      <SectionTemplatesPanel
+        isOpen={showSectionTemplatesPanel}
+        onClose={() => setShowSectionTemplatesPanel(false)}
+        onInsert={handleInsertSectionTemplate}
+        currentSection={selectedSectionId ? page.sections.find((s: Section) => s.id === selectedSectionId) : undefined}
+        tokens={tokens}
       />
 
       {/* Component Properties Panel */}
