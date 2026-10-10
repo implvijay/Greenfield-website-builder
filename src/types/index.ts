@@ -25,6 +25,7 @@ export interface Project {
   themeId: string;
   themeVariant: ThemeVariantType;
   pages: Page[];
+  pageFolders: PageFolder[];
   menus: Menu[];
   forms: Form[];
   seo: SEOSettings;
@@ -109,10 +110,26 @@ export interface Page {
   slug: string;
   type: PageType;
   parentId?: string;
+  folderId?: string;
   status: 'draft' | 'published' | 'archived';
   sections: Section[];
   seo: PageSEO;
   order: number;
+  tags?: string[];
+  scheduledPublishAt?: string;
+  scheduledExpireAt?: string;
+  lastModified?: string;
+}
+
+export interface PageFolder {
+  id: string;
+  name: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  parentId?: string;
+  order: number;
+  createdAt: string;
 }
 
 export interface PageSEO {

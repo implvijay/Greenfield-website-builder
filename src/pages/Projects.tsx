@@ -174,6 +174,7 @@ function CreateProjectModal({ onClose, onCreate }: { onClose: () => void; onCrea
       themeId: industryThemes[industry],
       themeVariant: 'default',
       pages,
+      pageFolders: [],
       menus,
       forms: [],
       seo: generateStarterSEO(industryConfig),

@@ -25,6 +25,9 @@ import { PageTemplatesPanel } from '../components/PageTemplatesPanel';
 import { PageDuplicateDialog } from '../components/PageDuplicateDialog';
 import { PageCompareDialog } from '../components/PageCompareDialog';
 import { PageManagementPanel } from '../components/PageManagementPanel';
+import { PageFolderPanel } from '../components/PageFolderPanel';
+import { PageTagManager } from '../components/PageTagManager';
+import { PageScheduleManager } from '../components/PageScheduleManager';
 import { HistoryManager } from '../services/history';
 import { KeyboardShortcutManager, createBuilderShortcuts } from '../services/keyboardShortcuts';
 import { AutoSaveManager } from '../services/autoSave';
@@ -37,10 +40,10 @@ import {
   BarChart3, Eye, History, Download, Settings, Plus, Trash2, Copy,
   GripVertical, ChevronDown, ChevronRight, ArrowLeft, Save, Monitor,
   Tablet, Smartphone, Check, X, Edit3, Layers, Palette, Type,
-  Star, Zap, Globe, Share2, Code, FileCode, Package, Folder
+  Star, Zap, Globe, Share2, Code, FileCode, Package, Folder, Tag, Calendar
 } from 'lucide-react';
 
-type WorkspaceTab = 'overview' | 'pages' | 'builder' | 'menus' | 'media' | 'seo' | 'forms' | 'analytics' | 'blog' | 'preview' | 'versions' | 'export';
+type WorkspaceTab = 'overview' | 'pages' | 'builder' | 'menus' | 'media' | 'seo' | 'forms' | 'analytics' | 'blog' | 'preview' | 'versions' | 'export' | 'folders' | 'tags' | 'scheduling';
 
 // Draggable Section Component
 function DraggableSection({ id, children, isSelected, onClick }: { id: string; children: React.ReactNode; isSelected: boolean; onClick: () => void }) {
@@ -108,6 +111,9 @@ export function ProjectWorkspace() {
     { id: 'forms', label: 'Forms', icon: FileText },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'blog', label: 'Blog', icon: FileText },
+    { id: 'folders', label: 'Folders', icon: Folder },
+    { id: 'tags', label: 'Tags', icon: Tag },
+    { id: 'scheduling', label: 'Scheduling', icon: Calendar },
     { id: 'preview', label: 'Preview', icon: Eye },
     { id: 'versions', label: 'Versions', icon: History },
     { id: 'export', label: 'Export', icon: Download },
@@ -166,6 +172,9 @@ export function ProjectWorkspace() {
           {activeTab === 'forms' && <FormBuilder project={project} updateProject={updateProject} notify={notify} />}
           {activeTab === 'analytics' && <AnalyticsConfig project={project} updateProject={updateProject} notify={notify} />}
           {activeTab === 'blog' && <BlogManager project={project} updateProject={updateProject} notify={notify} />}
+          {activeTab === 'folders' && <FoldersTab project={project} updateProject={updateProject} notify={notify} />}
+          {activeTab === 'tags' && <TagsTab project={project} updateProject={updateProject} notify={notify} />}
+          {activeTab === 'scheduling' && <SchedulingTab project={project} updateProject={updateProject} notify={notify} />}
           {activeTab === 'preview' && <PreviewTab project={project} tokens={tokens} />}
           {activeTab === 'versions' && <VersionsTab project={project} createVersion={createVersion} restoreVersion={restoreVersion} notify={notify} />}
           {activeTab === 'export' && <ExportTab project={project} notify={notify} />}
@@ -2496,6 +2505,76 @@ function ExportTab({ project, notify }: { project: any; notify: any }) {
           <div><span className="text-slate-500">Variant:</span> <span className="font-medium text-slate-900 ml-1 capitalize">{project.themeVariant}</span></div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// FOLDERS TAB
+function FoldersTab({ project, updateProject, notify }: { project: any; updateProject: any; notify: any }) {
+  const handleUpdateFolders = (folders: any[]) => {
+    updateProject({ ...project, pageFolders: folders });
+    notify('success', 'Folders updated');
+  };
+
+  const handleUpdatePages = (pages: Page[]) => {
+    updateProject({ ...project, pages });
+    notify('success', 'Pages updated');
+  };
+
+  const handleMovePageToFolder = (pageId: string, folderId: string | undefined) => {
+    const updatedPages = project.pages.map((p: Page) => 
+      p.id === pageId ? { ...p, folderId, lastModified: new Date().toISOString() } : p
+    );
+    updateProject({ ...project, pages: updatedPages });
+    notify('success', 'Page moved to folder');
+  };
+
+  return (
+    <div className="p-8">
+      <h1 className="text-2xl font-bold text-slate-900 mb-6">Page Folders</h1>
+      <PageFolderPanel
+        folders={project.pageFolders || []}
+        pages={project.pages}
+        onUpdateFolders={handleUpdateFolders}
+        onUpdatePages={handleUpdatePages}
+        onMovePageToFolder={handleMovePageToFolder}
+      />
+    </div>
+  );
+}
+
+// TAGS TAB
+function TagsTab({ project, updateProject, notify }: { project: any; updateProject: any; notify: any }) {
+  const handleUpdatePages = (pages: Page[]) => {
+    updateProject({ ...project, pages });
+    notify('success', 'Tags updated');
+  };
+
+  return (
+    <div className="p-8">
+      <h1 className="text-2xl font-bold text-slate-900 mb-6">Page Tags</h1>
+      <PageTagManager
+        pages={project.pages}
+        onUpdatePages={handleUpdatePages}
+      />
+    </div>
+  );
+}
+
+// SCHEDULING TAB
+function SchedulingTab({ project, updateProject, notify }: { project: any; updateProject: any; notify: any }) {
+  const handleUpdatePages = (pages: Page[]) => {
+    updateProject({ ...project, pages });
+    notify('success', 'Schedule updated');
+  };
+
+  return (
+    <div className="p-8">
+      <h1 className="text-2xl font-bold text-slate-900 mb-6">Page Scheduling</h1>
+      <PageScheduleManager
+        pages={project.pages}
+        onUpdatePages={handleUpdatePages}
+      />
     </div>
   );
 }
