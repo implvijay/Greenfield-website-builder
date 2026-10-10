@@ -19,9 +19,11 @@ import { ComponentLibrary } from '../components/ComponentLibrary';
 import { ComponentPropertiesPanel } from '../components/ComponentPropertiesPanel';
 import { GlobalSearch } from '../components/GlobalSearch';
 import { ComponentOperations } from '../components/ComponentOperations';
+import { ComponentTemplatesPanel } from '../components/ComponentTemplatesPanel';
 import { HistoryManager } from '../services/history';
 import { KeyboardShortcutManager, createBuilderShortcuts } from '../services/keyboardShortcuts';
 import { AutoSaveManager } from '../services/autoSave';
+import { copyComponentToClipboard, pasteComponentFromClipboard, hasClipboardContent } from '../services/clipboard';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, useDraggable, useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { Undo, Redo } from 'lucide-react';
@@ -375,6 +377,7 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
   const [selectedComponentId, setSelectedComponentId] = useState<string | null>(null);
   const [showComponentProperties, setShowComponentProperties] = useState(false);
   const [showGlobalSearch, setShowGlobalSearch] = useState(false);
+  const [showTemplatesPanel, setShowTemplatesPanel] = useState(false);
   const [lastSaved, setLastSaved] = useState<string>(new Date().toISOString());
   const [isSaving, setIsSaving] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -764,6 +767,106 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
     updatePages(updatedPages, 'Move Component Down');
   };
 
+  // Clipboard handlers
+  const handleCopyComponent = () => {
+    if (!selectedComponentId || !selectedSectionId) return;
+    
+    const section = page.sections.find((s: Section) => s.id === selectedSectionId);
+    if (!section) return;
+
+    for (const row of section.rows) {
+      for (const col of row.columns) {
+        const comp = col.components.find((c: any) => c.id === selectedComponentId);
+        if (comp) {
+          copyComponentToClipboard(comp);
+          notify('success', 'Component copied to clipboard');
+          return;
+        }
+      }
+    }
+  };
+
+  const handlePasteComponent = () => {
+    if (!selectedSectionId) {
+      notify('error', 'Please select a section first');
+      return;
+    }
+
+    const component = pasteComponentFromClipboard();
+    if (!component) {
+      notify('error', 'No component in clipboard');
+      return;
+    }
+
+    const updatedPages = project.pages.map((p: Page) => {
+      if (p.id !== selectedPageId) return p;
+      return {
+        ...p,
+        sections: p.sections.map(s => {
+          if (s.id !== selectedSectionId) return s;
+          return {
+            ...s,
+            rows: s.rows.map((r, rowIndex) => {
+              if (rowIndex === 0 && r.columns.length > 0) {
+                return {
+                  ...r,
+                  columns: r.columns.map((c, colIndex) => {
+                    if (colIndex === 0) {
+                      return { ...c, components: [...c.components, component] };
+                    }
+                    return c;
+                  }),
+                };
+              }
+              return r;
+            }),
+          };
+        }),
+      };
+    });
+
+    updatePages(updatedPages, 'Paste Component');
+    notify('success', 'Component pasted');
+  };
+
+  // Template insertion handler
+  const handleInsertTemplateComponent = (component: any) => {
+    if (!selectedSectionId) {
+      notify('error', 'Please select a section first');
+      return;
+    }
+
+    const updatedPages = project.pages.map((p: Page) => {
+      if (p.id !== selectedPageId) return p;
+      return {
+        ...p,
+        sections: p.sections.map(s => {
+          if (s.id !== selectedSectionId) return s;
+          return {
+            ...s,
+            rows: s.rows.map((r, rowIndex) => {
+              if (rowIndex === 0 && r.columns.length > 0) {
+                return {
+                  ...r,
+                  columns: r.columns.map((c, colIndex) => {
+                    if (colIndex === 0) {
+                      return { ...c, components: [...c.components, component] };
+                    }
+                    return c;
+                  }),
+                };
+              }
+              return r;
+            }),
+          };
+        }),
+      };
+    });
+
+    updatePages(updatedPages, 'Insert Template Component');
+    notify('success', 'Template component inserted');
+  };
+
   // Drag and drop handlers
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
@@ -1073,6 +1176,34 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
           <Package size={14} /> Components
         </button>
 
+        <button
+          onClick={() => setShowTemplatesPanel(true)}
+          disabled={!selectedSectionId}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          title={selectedSectionId ? 'Insert component template' : 'Select a section first'}
+        >
+          <Layers size={14} /> Templates
+        </button>
+
+        <div className="flex items-center gap-1 border-l border-slate-200 pl-3">
+          <button
+            onClick={handleCopyComponent}
+            disabled={!selectedComponentId}
+            className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            title="Copy component (Ctrl+C)"
+          >
+            <Copy size={16} />
+          </button>
+          <button
+            onClick={handlePasteComponent}
+            disabled={!selectedSectionId || !hasClipboardContent()}
+            className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            title="Paste component (Ctrl+V)"
+          >
+            <Package size={16} />
+          </button>
+        </div>
+
         <button onClick={() => setShowAddSection(true)} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg">
           <Plus size={14} /> Add Section
         </button>
@@ -1157,6 +1288,25 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
         isOpen={showComponentLibrary}
         onClose={() => setShowComponentLibrary(false)}
         onSelect={handleComponentSelect}
+      />
+
+      {/* Component Templates Panel */}
+      <ComponentTemplatesPanel
+        isOpen={showTemplatesPanel}
+        onClose={() => setShowTemplatesPanel(false)}
+        onInsert={handleInsertTemplateComponent}
+        currentComponent={selectedComponentId ? (() => {
+          if (!selectedSectionId) return undefined;
+          const section = page.sections.find((s: Section) => s.id === selectedSectionId);
+          if (!section) return undefined;
+          for (const row of section.rows) {
+            for (const col of row.columns) {
+              const comp = col.components.find((c: any) => c.id === selectedComponentId);
+              if (comp) return comp;
+            }
+          }
+          return undefined;
+        })() : undefined}
       />
 
       {/* Component Properties Panel */}
