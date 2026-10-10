@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ComponentInstance } from '../types';
-import { ComponentTemplate, getComponentTemplates, saveComponentTemplate, deleteComponentTemplate, createComponentFromTemplate } from '../services/componentTemplates';
-import { Package, Plus, Trash2, X, Save } from 'lucide-react';
+import { ComponentTemplate, getComponentTemplates, saveComponentTemplate, deleteComponentTemplate, createComponentFromTemplate, searchTemplates } from '../services/componentTemplates';
+import { Package, Plus, Trash2, X, Save, Search } from 'lucide-react';
 
 interface ComponentTemplatesPanelProps {
   isOpen: boolean;
@@ -16,11 +16,24 @@ export function ComponentTemplatesPanel({ isOpen, onClose, onInsert, currentComp
   const [newTemplateName, setNewTemplateName] = useState('');
   const [newTemplateDescription, setNewTemplateDescription] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const categories = ['all', ...new Set(templates.map(t => t.category))];
-  const filteredTemplates = selectedCategory === 'all' 
-    ? templates 
-    : templates.filter(t => t.category === selectedCategory);
+  
+  // Apply both category and search filters
+  const filteredTemplates = (() => {
+    let result = selectedCategory === 'all' 
+      ? templates 
+      : templates.filter(t => t.category === selectedCategory);
+    
+    if (searchQuery.trim()) {
+      result = searchTemplates(searchQuery).filter(t => 
+        selectedCategory === 'all' || t.category === selectedCategory
+      );
+    }
+    
+    return result;
+  })();
 
   const handleSaveTemplate = () => {
     if (!currentComponent || !newTemplateName.trim()) return;
@@ -71,6 +84,18 @@ export function ComponentTemplatesPanel({ isOpen, onClose, onInsert, currentComp
         </div>
 
         <div className="flex-1 overflow-auto p-6">
+          {/* Search Input */}
+          <div className="mb-4 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search templates..."
+              className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+
           {/* Category Filter */}
           <div className="mb-6 flex items-center gap-2 flex-wrap">
             {categories.map(cat => (

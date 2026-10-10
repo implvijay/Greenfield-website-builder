@@ -77,9 +77,12 @@ export function createBuilderShortcuts(
   onSave: () => void,
   onDuplicate: () => void,
   onDelete: () => void,
-  onAddSection: () => void
+  onAddSection: () => void,
+  onCopy?: () => void,
+  onPaste?: () => void,
+  onCut?: () => void
 ): KeyboardShortcut[] {
-  return [
+  const shortcuts: KeyboardShortcut[] = [
     {
       key: 'z',
       ctrl: true,
@@ -128,4 +131,34 @@ export function createBuilderShortcuts(
       action: onAddSection,
     },
   ];
+
+  // Add clipboard shortcuts if handlers provided
+  if (onCopy) {
+    shortcuts.push({
+      key: 'c',
+      ctrl: true,
+      description: 'Copy component',
+      action: onCopy,
+    });
+  }
+
+  if (onPaste) {
+    shortcuts.push({
+      key: 'v',
+      ctrl: true,
+      description: 'Paste component',
+      action: onPaste,
+    });
+  }
+
+  if (onCut) {
+    shortcuts.push({
+      key: 'x',
+      ctrl: true,
+      description: 'Cut component',
+      action: onCut,
+    });
+  }
+
+  return shortcuts;
 }

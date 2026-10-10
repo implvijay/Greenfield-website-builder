@@ -420,7 +420,10 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
           deleteSection(selectedSectionId);
         }
       },
-      () => setShowAddSection(true)
+      () => setShowAddSection(true),
+      handleCopyComponent,
+      handlePasteComponent,
+      handleCutComponent
     );
 
     shortcuts.forEach(shortcut => keyboardManager.register(shortcut));
@@ -827,6 +830,16 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
 
     updatePages(updatedPages, 'Paste Component');
     notify('success', 'Component pasted');
+  };
+
+  const handleCutComponent = () => {
+    if (!selectedComponentId || !selectedSectionId) return;
+    
+    // First copy the component
+    handleCopyComponent();
+    
+    // Then delete it
+    handleComponentDelete();
   };
 
   // Template insertion handler

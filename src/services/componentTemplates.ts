@@ -12,6 +12,7 @@ export interface ComponentTemplate {
   props: any;
   createdAt: string;
   category: string;
+  tags?: string[];
 }
 
 export function getComponentTemplates(): ComponentTemplate[] {
@@ -105,4 +106,96 @@ function getDefaultTemplates(): ComponentTemplate[] {
       category: 'Testimonials',
     },
   ];
+}
+
+// Search templates by name, description, or tags
+export function searchTemplates(query: string): ComponentTemplate[] {
+  if (!query.trim()) return getComponentTemplates();
+  
+  const lowerQuery = query.toLowerCase();
+  const templates = getComponentTemplates();
+  
+  return templates.filter(template => {
+    // Search in name
+    if (template.name.toLowerCase().includes(lowerQuery)) return true;
+    
+    // Search in description
+    if (template.description.toLowerCase().includes(lowerQuery)) return true;
+    
+    // Search in tags
+    if (template.tags && template.tags.some(tag => tag.toLowerCase().includes(lowerQuery))) return true;
+    
+    // Search in category
+    if (template.category.toLowerCase().includes(lowerQuery)) return true;
+    
+    // Search in component type
+    if (template.componentType.toLowerCase().includes(lowerQuery)) return true;
+    
+    return false;
+  });
+}
+
+// Get all unique tags
+export function getAllTags(): string[] {
+  const templates = getComponentTemplates();
+  const tagSet = new Set<string>();
+  
+  templates.forEach(template => {
+    if (template.tags) {
+      template.tags.forEach(tag => tagSet.add(tag));
+    }
+  });
+  
+  return Array.from(tagSet).sort();
+}
+
+// Filter templates by tags
+export function filterTemplatesByTags(tags: string[]): ComponentTemplate[] {
+  if (tags.length === 0) return getComponentTemplates();
+  
+  const templates = getComponentTemplates();
+  return templates.filter(template => {
+    if (!template.tags || template.tags.length === 0) return false;
+    return tags.some(tag => template.tags!.includes(tag));
+  });
+}
+
+// Export templates to JSON
+export function exportTemplatesToJSON(): string {
+  const templates = getComponentTemplates();
+  return JSON.stringify(templates, null, 2);
+}
+
+// Import templates from JSON
+export function importTemplatesFromJSON(json: string): { success: boolean; count: number; error?: string } {
+  try {
+    const imported = JSON.parse(json);
+    
+    if (!Array.isArray(imported)) {
+      return { success: false, count: 0, error: 'Invalid format: expected an array of templates' };
+    }
+    
+    // Validate each template
+    const validTemplates = imported.filter((t: any) => {
+      return t.name && t.componentType && t.props;
+    }).map((t: any) => ({
+      id: uuid(),
+      name: t.name,
+      description: t.description || '',
+      componentType: t.componentType,
+      props: t.props,
+      createdAt: t.createdAt || new Date().toISOString(),
+      category: t.category || 'Custom',
+      tags: t.tags || [],
+    }));
+    
+    // Merge with existing templates
+    const existing = getComponentTemplates();
+    const merged = [...existing, ...validTemplates];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+    
+    return { success: true, count: validTemplates.length };
+  } catch (error) {
+    return { success: false, count: 0, error: 'Failed to parse JSON' };
+  }
 }
