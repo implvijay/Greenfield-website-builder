@@ -109,7 +109,7 @@ export interface Page {
   slug: string;
   type: PageType;
   parentId?: string;
-  status: 'draft' | 'published';
+  status: 'draft' | 'published' | 'archived';
   sections: Section[];
   seo: PageSEO;
   order: number;

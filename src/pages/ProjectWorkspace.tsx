@@ -21,6 +21,10 @@ import { GlobalSearch } from '../components/GlobalSearch';
 import { ComponentOperations } from '../components/ComponentOperations';
 import { ComponentTemplatesPanel } from '../components/ComponentTemplatesPanel';
 import { SectionTemplatesPanel } from '../components/SectionTemplatesPanel';
+import { PageTemplatesPanel } from '../components/PageTemplatesPanel';
+import { PageDuplicateDialog } from '../components/PageDuplicateDialog';
+import { PageCompareDialog } from '../components/PageCompareDialog';
+import { PageManagementPanel } from '../components/PageManagementPanel';
 import { HistoryManager } from '../services/history';
 import { KeyboardShortcutManager, createBuilderShortcuts } from '../services/keyboardShortcuts';
 import { AutoSaveManager } from '../services/autoSave';
@@ -33,7 +37,7 @@ import {
   BarChart3, Eye, History, Download, Settings, Plus, Trash2, Copy,
   GripVertical, ChevronDown, ChevronRight, ArrowLeft, Save, Monitor,
   Tablet, Smartphone, Check, X, Edit3, Layers, Palette, Type,
-  Star, Zap, Globe, Share2, Code, FileCode, Package
+  Star, Zap, Globe, Share2, Code, FileCode, Package, Folder
 } from 'lucide-react';
 
 type WorkspaceTab = 'overview' | 'pages' | 'builder' | 'menus' | 'media' | 'seo' | 'forms' | 'analytics' | 'blog' | 'preview' | 'versions' | 'export';
@@ -380,6 +384,12 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
   const [showGlobalSearch, setShowGlobalSearch] = useState(false);
   const [showTemplatesPanel, setShowTemplatesPanel] = useState(false);
   const [showSectionTemplatesPanel, setShowSectionTemplatesPanel] = useState(false);
+  const [showPageTemplatesPanel, setShowPageTemplatesPanel] = useState(false);
+  const [showPageManagementPanel, setShowPageManagementPanel] = useState(false);
+  const [showPageDuplicateDialog, setShowPageDuplicateDialog] = useState(false);
+  const [pageToDuplicate, setPageToDuplicate] = useState<Page | null>(null);
+  const [showPageCompareDialog, setShowPageCompareDialog] = useState(false);
+  const [pagesToCompare, setPagesToCompare] = useState<[Page, Page] | null>(null);
   const [lastSaved, setLastSaved] = useState<string>(new Date().toISOString());
   const [isSaving, setIsSaving] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -895,6 +905,33 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
     notify('success', 'Section template inserted');
   };
 
+  const handleInsertPageTemplate = (newPage: Page) => {
+    const updatedPages = [...project.pages, newPage];
+    updateProject({ ...project, pages: updatedPages });
+    notify('success', 'Page template inserted');
+  };
+
+  const handleDuplicatePage = (page: Page) => {
+    setPageToDuplicate(page);
+    setShowPageDuplicateDialog(true);
+  };
+
+  const handlePageDuplicated = (newPage: Page) => {
+    const updatedPages = [...project.pages, newPage];
+    updateProject({ ...project, pages: updatedPages });
+    notify('success', `Page "${newPage.title}" duplicated`);
+  };
+
+  const handleComparePages = (page1: Page, page2: Page) => {
+    setPagesToCompare([page1, page2]);
+    setShowPageCompareDialog(true);
+  };
+
+  const handleUpdatePages = (updatedPages: Page[]) => {
+    updateProject({ ...project, pages: updatedPages });
+    notify('success', 'Pages updated');
+  };
+
   // Drag and drop handlers
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
@@ -1221,6 +1258,22 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
           <Layers size={14} /> Section Templates
         </button>
 
+        <button
+          onClick={() => setShowPageTemplatesPanel(true)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-medium rounded-lg"
+          title="Insert page template"
+        >
+          <FileText size={14} /> Page Templates
+        </button>
+
+        <button
+          onClick={() => setShowPageManagementPanel(true)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium rounded-lg"
+          title="Manage pages"
+        >
+          <Folder size={14} /> Manage Pages
+        </button>
+
         <div className="flex items-center gap-1 border-l border-slate-200 pl-3">
           <button
             onClick={handleCopyComponent}
@@ -1352,6 +1405,47 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
         currentSection={selectedSectionId ? page.sections.find((s: Section) => s.id === selectedSectionId) : undefined}
         tokens={tokens}
       />
+
+      <PageTemplatesPanel
+        isOpen={showPageTemplatesPanel}
+        onClose={() => setShowPageTemplatesPanel(false)}
+        onInsert={handleInsertPageTemplate}
+        currentPage={page}
+        tokens={tokens}
+      />
+
+      <PageManagementPanel
+        isOpen={showPageManagementPanel}
+        onClose={() => setShowPageManagementPanel(false)}
+        pages={project.pages}
+        onUpdatePages={handleUpdatePages}
+        onDuplicatePage={handleDuplicatePage}
+        onComparePages={handleComparePages}
+      />
+
+      {showPageDuplicateDialog && pageToDuplicate && (
+        <PageDuplicateDialog
+          isOpen={showPageDuplicateDialog}
+          onClose={() => {
+            setShowPageDuplicateDialog(false);
+            setPageToDuplicate(null);
+          }}
+          page={pageToDuplicate}
+          onDuplicate={handlePageDuplicated}
+        />
+      )}
+
+      {showPageCompareDialog && pagesToCompare && (
+        <PageCompareDialog
+          isOpen={showPageCompareDialog}
+          onClose={() => {
+            setShowPageCompareDialog(false);
+            setPagesToCompare(null);
+          }}
+          page1={pagesToCompare[0]}
+          page2={pagesToCompare[1]}
+        />
+      )}
 
       {/* Component Properties Panel */}
       {showComponentProperties && selectedComponentId && selectedSectionId && (() => {
