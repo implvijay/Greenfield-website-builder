@@ -17,6 +17,8 @@ import { QuickActionsPanel } from '../components/QuickActionsPanel';
 import { BuilderStatusBar } from '../components/BuilderStatusBar';
 import { ComponentLibrary } from '../components/ComponentLibrary';
 import { ComponentPropertiesPanel } from '../components/ComponentPropertiesPanel';
+import { GlobalSearch } from '../components/GlobalSearch';
+import { ComponentOperations } from '../components/ComponentOperations';
 import { HistoryManager } from '../services/history';
 import { KeyboardShortcutManager, createBuilderShortcuts } from '../services/keyboardShortcuts';
 import { AutoSaveManager } from '../services/autoSave';
@@ -372,6 +374,7 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
   const [showComponentLibrary, setShowComponentLibrary] = useState(false);
   const [selectedComponentId, setSelectedComponentId] = useState<string | null>(null);
   const [showComponentProperties, setShowComponentProperties] = useState(false);
+  const [showGlobalSearch, setShowGlobalSearch] = useState(false);
   const [lastSaved, setLastSaved] = useState<string>(new Date().toISOString());
   const [isSaving, setIsSaving] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -419,9 +422,23 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
 
     shortcuts.forEach(shortcut => keyboardManager.register(shortcut));
 
+    // Add global search shortcut (Ctrl+K or Cmd+K)
+    const handleGlobalSearchShortcut = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowGlobalSearch(true);
+      }
+      if (e.key === 'Escape') {
+        setShowGlobalSearch(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalSearchShortcut);
+
     return () => {
       keyboardManager.destroy();
       autoSaveManager.destroy();
+      window.removeEventListener('keydown', handleGlobalSearchShortcut);
     };
   }, [selectedSectionId, page]);
 
@@ -605,6 +622,146 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
         }
       }
     }
+  };
+
+  // Component operation handlers
+  const handleComponentDuplicate = () => {
+    if (!selectedComponentId || !selectedSectionId) return;
+    
+    const updatedPages = project.pages.map((p: Page) => {
+      if (p.id !== selectedPageId) return p;
+      return {
+        ...p,
+        sections: p.sections.map(s => {
+          if (s.id !== selectedSectionId) return s;
+          return {
+            ...s,
+            rows: s.rows.map(r => {
+              return {
+                ...r,
+                columns: r.columns.map(c => {
+                  const compIndex = c.components.findIndex((comp: any) => comp.id === selectedComponentId);
+                  if (compIndex === -1) return c;
+                  
+                  const originalComp = c.components[compIndex];
+                  const duplicatedComp = {
+                    ...originalComp,
+                    id: uuid(),
+                  };
+                  
+                  const newComponents = [...c.components];
+                  newComponents.splice(compIndex + 1, 0, duplicatedComp);
+                  
+                  return { ...c, components: newComponents };
+                }),
+              };
+            }),
+          };
+        }),
+      };
+    });
+    
+    updatePages(updatedPages, 'Duplicate Component');
+    notify('success', 'Component duplicated');
+  };
+
+  const handleComponentDelete = () => {
+    if (!selectedComponentId || !selectedSectionId) return;
+    
+    const updatedPages = project.pages.map((p: Page) => {
+      if (p.id !== selectedPageId) return p;
+      return {
+        ...p,
+        sections: p.sections.map(s => {
+          if (s.id !== selectedSectionId) return s;
+          return {
+            ...s,
+            rows: s.rows.map(r => {
+              return {
+                ...r,
+                columns: r.columns.map(c => {
+                  return {
+                    ...c,
+                    components: c.components.filter((comp: any) => comp.id !== selectedComponentId),
+                  };
+                }),
+              };
+            }),
+          };
+        }),
+      };
+    });
+    
+    updatePages(updatedPages, 'Delete Component');
+    setSelectedComponentId(null);
+    setShowComponentProperties(false);
+    notify('success', 'Component deleted');
+  };
+
+  const handleComponentMoveUp = () => {
+    if (!selectedComponentId || !selectedSectionId) return;
+    
+    const updatedPages = project.pages.map((p: Page) => {
+      if (p.id !== selectedPageId) return p;
+      return {
+        ...p,
+        sections: p.sections.map(s => {
+          if (s.id !== selectedSectionId) return s;
+          return {
+            ...s,
+            rows: s.rows.map(r => {
+              return {
+                ...r,
+                columns: r.columns.map(c => {
+                  const compIndex = c.components.findIndex((comp: any) => comp.id === selectedComponentId);
+                  if (compIndex <= 0) return c;
+                  
+                  const newComponents = [...c.components];
+                  [newComponents[compIndex - 1], newComponents[compIndex]] = [newComponents[compIndex], newComponents[compIndex - 1]];
+                  
+                  return { ...c, components: newComponents };
+                }),
+              };
+            }),
+          };
+        }),
+      };
+    });
+    
+    updatePages(updatedPages, 'Move Component Up');
+  };
+
+  const handleComponentMoveDown = () => {
+    if (!selectedComponentId || !selectedSectionId) return;
+    
+    const updatedPages = project.pages.map((p: Page) => {
+      if (p.id !== selectedPageId) return p;
+      return {
+        ...p,
+        sections: p.sections.map(s => {
+          if (s.id !== selectedSectionId) return s;
+          return {
+            ...s,
+            rows: s.rows.map(r => {
+              return {
+                ...r,
+                columns: r.columns.map(c => {
+                  const compIndex = c.components.findIndex((comp: any) => comp.id === selectedComponentId);
+                  if (compIndex === -1 || compIndex >= c.components.length - 1) return c;
+                  
+                  const newComponents = [...c.components];
+                  [newComponents[compIndex], newComponents[compIndex + 1]] = [newComponents[compIndex + 1], newComponents[compIndex]];
+                  
+                  return { ...c, components: newComponents };
+                }),
+              };
+            }),
+          };
+        }),
+      };
+    });
+    
+    updatePages(updatedPages, 'Move Component Down');
   };
 
   // Drag and drop handlers
@@ -891,6 +1048,14 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
         </div>
 
         <button
+          onClick={() => setShowGlobalSearch(true)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-lg"
+          title="Search across all pages (Ctrl+K)"
+        >
+          <Search size={14} /> Search
+        </button>
+
+        <button
           onClick={generateAIContent}
           disabled={generatingAI}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg disabled:opacity-50"
@@ -943,7 +1108,18 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
                   </div>
 
                   {/* Section Content */}
-                  <SectionRenderer section={section} tokens={tokens} editable={true} onUpdate={(rowId, colId, compId, newProps) => updateComponent(section.id, rowId, colId, compId, newProps)} onComponentClick={handleComponentClick} />
+                  <SectionRenderer 
+                    section={section} 
+                    tokens={tokens} 
+                    editable={true} 
+                    onUpdate={(rowId, colId, compId, newProps) => updateComponent(section.id, rowId, colId, compId, newProps)} 
+                    onComponentClick={handleComponentClick}
+                    selectedComponentId={selectedComponentId}
+                    onComponentDuplicate={handleComponentDuplicate}
+                    onComponentDelete={handleComponentDelete}
+                    onComponentMoveUp={handleComponentMoveUp}
+                    onComponentMoveDown={handleComponentMoveDown}
+                  />
                 </DraggableSection>
               ))}
               </div>
@@ -1014,6 +1190,30 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
         );
       })()}
 
+      {/* Global Search */}
+      <GlobalSearch
+        pages={project.pages}
+        isOpen={showGlobalSearch}
+        onClose={() => setShowGlobalSearch(false)}
+        onNavigate={(pageId, sectionId, componentId) => {
+          // Navigate to the page
+          setSelectedPageId(pageId);
+          
+          // If section is specified, select it
+          if (sectionId) {
+            setSelectedSectionId(sectionId);
+          }
+          
+          // If component is specified, select it and open properties
+          if (componentId && sectionId) {
+            setSelectedComponentId(componentId);
+            setShowComponentProperties(true);
+          }
+          
+          notify('info', 'Navigated to item');
+        }}
+      />
+
       {/* Settings Panel */}
       {showSettingsPanel && selectedSectionId && (
         <SectionSettingsPanel
@@ -1073,7 +1273,7 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
 }
 
 // Section Renderer
-function SectionRenderer({ section, tokens, editable, onUpdate, onComponentClick }: { section: Section; tokens: DesignTokens; editable?: boolean; onUpdate?: (rowId: string, colId: string, compId: string, props: any) => void; onComponentClick?: (compId: string) => void }) {
+function SectionRenderer({ section, tokens, editable, onUpdate, onComponentClick, selectedComponentId, onComponentDuplicate, onComponentDelete, onComponentMoveUp, onComponentMoveDown }: { section: Section; tokens: DesignTokens; editable?: boolean; onUpdate?: (rowId: string, colId: string, compId: string, props: any) => void; onComponentClick?: (compId: string) => void; selectedComponentId?: string | null; onComponentDuplicate?: () => void; onComponentDelete?: () => void; onComponentMoveUp?: () => void; onComponentMoveDown?: () => void }) {
   const bgStyle = section.settings.background === 'gradient'
     ? { background: `linear-gradient(135deg, ${tokens.colors.primary}, ${tokens.colors.primaryDark})` }
     : section.settings.backgroundImage
@@ -1087,30 +1287,49 @@ function SectionRenderer({ section, tokens, editable, onUpdate, onComponentClick
       <div style={{ maxWidth: section.settings.fullWidth ? '100%' : tokens.spacing.container, margin: '0 auto' }}>
         {section.rows.map(row => (
           <div key={row.id} className="flex flex-wrap" style={{ gap: row.gap || tokens.spacing.gap }}>
-            {row.columns.map(col => (
-              <div key={col.id} style={{ width: `${col.width}%`, minWidth: col.width < 100 ? '250px' : '100%' }} className="flex-1">
-                {col.components.map(comp => (
-                  <div
-                    key={comp.id}
-                    onClick={(e) => {
-                      if (editable && onComponentClick) {
-                        e.stopPropagation();
-                        onComponentClick(comp.id);
-                      }
-                    }}
-                    className={editable ? 'cursor-pointer hover:ring-2 hover:ring-indigo-400 hover:ring-offset-2 rounded transition-all' : ''}
-                  >
-                    <ComponentRenderer
-                      component={comp}
-                      tokens={tokens}
-                      textColor={textColor}
-                      editable={editable}
-                      onUpdate={(newProps) => onUpdate?.(row.id, col.id, comp.id, newProps)}
-                    />
-                  </div>
-                ))}
-              </div>
-            ))}
+            {row.columns.map(col => {
+              const allComponents = col.components;
+              return (
+                <div key={col.id} style={{ width: `${col.width}%`, minWidth: col.width < 100 ? '250px' : '100%' }} className="flex-1">
+                  {col.components.map((comp, compIndex) => {
+                    const isSelected = selectedComponentId === comp.id;
+                    const canMoveUp = compIndex > 0;
+                    const canMoveDown = compIndex < allComponents.length - 1;
+                    
+                    return (
+                      <div
+                        key={comp.id}
+                        onClick={(e) => {
+                          if (editable && onComponentClick) {
+                            e.stopPropagation();
+                            onComponentClick(comp.id);
+                          }
+                        }}
+                        className={`relative ${editable ? 'cursor-pointer hover:ring-2 hover:ring-indigo-400 hover:ring-offset-2 rounded transition-all' : ''} ${isSelected ? 'ring-2 ring-indigo-500 ring-offset-2' : ''}`}
+                      >
+                        <ComponentRenderer
+                          component={comp}
+                          tokens={tokens}
+                          textColor={textColor}
+                          editable={editable}
+                          onUpdate={(newProps) => onUpdate?.(row.id, col.id, comp.id, newProps)}
+                        />
+                        {editable && isSelected && onComponentDuplicate && onComponentDelete && onComponentMoveUp && onComponentMoveDown && (
+                          <ComponentOperations
+                            onDuplicate={onComponentDuplicate}
+                            onDelete={onComponentDelete}
+                            onMoveUp={onComponentMoveUp}
+                            onMoveDown={onComponentMoveDown}
+                            canMoveUp={canMoveUp}
+                            canMoveDown={canMoveDown}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
           </div>
         ))}
       </div>

@@ -186,6 +186,332 @@ export function ComponentPropertiesPanel({ component, onUpdate, onClose }: Compo
           </div>
         );
 
+      case 'card':
+        return (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Title</label>
+              <input
+                type="text"
+                value={props.title || ''}
+                onChange={(e) => onUpdate({ title: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+              <textarea
+                value={props.description || ''}
+                onChange={(e) => onUpdate({ description: e.target.value })}
+                rows={3}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Image URL</label>
+              <input
+                type="url"
+                value={props.image || ''}
+                onChange={(e) => onUpdate({ image: e.target.value })}
+                placeholder="https://example.com/image.jpg"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Icon (emoji)</label>
+              <input
+                type="text"
+                value={props.icon || ''}
+                onChange={(e) => onUpdate({ icon: e.target.value })}
+                placeholder="⭐"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+          </div>
+        );
+
+      case 'stat':
+        return (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Value</label>
+              <input
+                type="text"
+                value={props.value || ''}
+                onChange={(e) => onUpdate({ value: e.target.value })}
+                placeholder="100+"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Label</label>
+              <input
+                type="text"
+                value={props.label || ''}
+                onChange={(e) => onUpdate({ label: e.target.value })}
+                placeholder="Happy Customers"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Icon (emoji)</label>
+              <input
+                type="text"
+                value={props.icon || ''}
+                onChange={(e) => onUpdate({ icon: e.target.value })}
+                placeholder="📊"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+          </div>
+        );
+
+      case 'testimonial':
+        return (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Quote Text</label>
+              <textarea
+                value={props.text || ''}
+                onChange={(e) => onUpdate({ text: e.target.value })}
+                rows={4}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
+              <input
+                type="text"
+                value={props.name || ''}
+                onChange={(e) => onUpdate({ name: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Role/Title</label>
+              <input
+                type="text"
+                value={props.role || ''}
+                onChange={(e) => onUpdate({ role: e.target.value })}
+                placeholder="CEO, Company Name"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Avatar URL</label>
+              <input
+                type="url"
+                value={props.avatar || ''}
+                onChange={(e) => onUpdate({ avatar: e.target.value })}
+                placeholder="https://example.com/avatar.jpg"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+          </div>
+        );
+
+      case 'team-member':
+        return (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
+              <input
+                type="text"
+                value={props.name || ''}
+                onChange={(e) => onUpdate({ name: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Role/Position</label>
+              <input
+                type="text"
+                value={props.role || ''}
+                onChange={(e) => onUpdate({ role: e.target.value })}
+                placeholder="Chief Executive Officer"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Bio</label>
+              <textarea
+                value={props.bio || ''}
+                onChange={(e) => onUpdate({ bio: e.target.value })}
+                rows={3}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Photo URL</label>
+              <input
+                type="url"
+                value={props.image || ''}
+                onChange={(e) => onUpdate({ image: e.target.value })}
+                placeholder="https://example.com/photo.jpg"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+          </div>
+        );
+
+      case 'pricing-card':
+        return (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Plan Name</label>
+              <input
+                type="text"
+                value={props.name || ''}
+                onChange={(e) => onUpdate({ name: e.target.value })}
+                placeholder="Professional"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Price</label>
+              <input
+                type="text"
+                value={props.price || ''}
+                onChange={(e) => onUpdate({ price: e.target.value })}
+                placeholder="$99"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Period</label>
+              <input
+                type="text"
+                value={props.period || ''}
+                onChange={(e) => onUpdate({ period: e.target.value })}
+                placeholder="/month"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Features</label>
+              <div className="space-y-2">
+                {(props.features || []).map((feature: string, i: number) => (
+                  <div key={i} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={feature}
+                      onChange={(e) => {
+                        const newFeatures = [...(props.features || [])];
+                        newFeatures[i] = e.target.value;
+                        onUpdate({ features: newFeatures });
+                      }}
+                      className="flex-1 px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <button
+                      onClick={() => {
+                        const newFeatures = (props.features || []).filter((_: any, idx: number) => idx !== i);
+                        onUpdate({ features: newFeatures });
+                      }}
+                      className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+                <button
+                  onClick={() => {
+                    const newFeatures = [...(props.features || []), 'New feature'];
+                    onUpdate({ features: newFeatures });
+                  }}
+                  className="w-full px-3 py-2 border border-dashed border-slate-300 rounded-lg text-sm text-slate-600 hover:border-indigo-500 hover:text-indigo-600"
+                >
+                  + Add Feature
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={props.popular || false}
+                  onChange={(e) => onUpdate({ popular: e.target.checked })}
+                  className="rounded"
+                />
+                <span className="text-sm font-medium text-slate-700">Mark as Popular</span>
+              </label>
+            </div>
+          </div>
+        );
+
+      case 'faq-item':
+        return (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Question</label>
+              <input
+                type="text"
+                value={props.question || ''}
+                onChange={(e) => onUpdate({ question: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Answer</label>
+              <textarea
+                value={props.answer || ''}
+                onChange={(e) => onUpdate({ answer: e.target.value })}
+                rows={4}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+          </div>
+        );
+
+      case 'form-field':
+        return (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Label</label>
+              <input
+                type="text"
+                value={props.label || ''}
+                onChange={(e) => onUpdate({ label: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Field Type</label>
+              <select
+                value={props.fieldType || 'text'}
+                onChange={(e) => onUpdate({ fieldType: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="text">Text</option>
+                <option value="email">Email</option>
+                <option value="tel">Phone</option>
+                <option value="textarea">Textarea</option>
+                <option value="number">Number</option>
+                <option value="url">URL</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Placeholder</label>
+              <input
+                type="text"
+                value={props.placeholder || ''}
+                onChange={(e) => onUpdate({ placeholder: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={props.required || false}
+                  onChange={(e) => onUpdate({ required: e.target.checked })}
+                  className="rounded"
+                />
+                <span className="text-sm font-medium text-slate-700">Required Field</span>
+              </label>
+            </div>
+          </div>
+        );
+
       default:
         return (
           <div className="text-center py-8 text-slate-500">
