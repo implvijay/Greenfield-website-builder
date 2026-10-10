@@ -28,6 +28,9 @@ import { PageManagementPanel } from '../components/PageManagementPanel';
 import { PageFolderPanel } from '../components/PageFolderPanel';
 import { PageTagManager } from '../components/PageTagManager';
 import { PageScheduleManager } from '../components/PageScheduleManager';
+import { AnalyticsDashboard } from '../components/AnalyticsDashboard';
+import { NotificationPanel, NotificationBell } from '../components/NotificationPanel';
+import { WorkflowPanel } from '../components/WorkflowPanel';
 import { HistoryManager } from '../services/history';
 import { KeyboardShortcutManager, createBuilderShortcuts } from '../services/keyboardShortcuts';
 import { AutoSaveManager } from '../services/autoSave';
@@ -40,10 +43,10 @@ import {
   BarChart3, Eye, History, Download, Settings, Plus, Trash2, Copy,
   GripVertical, ChevronDown, ChevronRight, ArrowLeft, Save, Monitor,
   Tablet, Smartphone, Check, X, Edit3, Layers, Palette, Type,
-  Star, Zap, Globe, Share2, Code, FileCode, Package, Folder, Tag, Calendar
+  Star, Zap, Globe, Share2, Code, FileCode, Package, Folder, Tag, Calendar, Bell
 } from 'lucide-react';
 
-type WorkspaceTab = 'overview' | 'pages' | 'builder' | 'menus' | 'media' | 'seo' | 'forms' | 'analytics' | 'blog' | 'preview' | 'versions' | 'export' | 'folders' | 'tags' | 'scheduling';
+type WorkspaceTab = 'overview' | 'pages' | 'builder' | 'menus' | 'media' | 'seo' | 'forms' | 'analytics' | 'blog' | 'preview' | 'versions' | 'export' | 'folders' | 'tags' | 'scheduling' | 'dashboard' | 'notifications';
 
 // Draggable Section Component
 function DraggableSection({ id, children, isSelected, onClick }: { id: string; children: React.ReactNode; isSelected: boolean; onClick: () => void }) {
@@ -103,6 +106,7 @@ export function ProjectWorkspace() {
 
   const tabs: { id: WorkspaceTab; label: string; icon: any }[] = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+    { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
     { id: 'pages', label: 'Pages', icon: FileText },
     { id: 'builder', label: 'Builder', icon: Paintbrush },
     { id: 'menus', label: 'Menus', icon: MenuIcon },
@@ -114,6 +118,7 @@ export function ProjectWorkspace() {
     { id: 'folders', label: 'Folders', icon: Folder },
     { id: 'tags', label: 'Tags', icon: Tag },
     { id: 'scheduling', label: 'Scheduling', icon: Calendar },
+    { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'preview', label: 'Preview', icon: Eye },
     { id: 'versions', label: 'Versions', icon: History },
     { id: 'export', label: 'Export', icon: Download },
@@ -164,6 +169,7 @@ export function ProjectWorkspace() {
         {/* Main Content */}
         <div className="flex-1 overflow-auto bg-slate-50">
           {activeTab === 'overview' && <OverviewTab project={project} tokens={tokens} />}
+          {activeTab === 'dashboard' && <DashboardTab project={project} />}
           {activeTab === 'pages' && <PagesTab project={project} updateProject={updateProject} notify={notify} />}
           {activeTab === 'builder' && <BuilderTab project={project} updateProject={updateProject} tokens={tokens} notify={notify} />}
           {activeTab === 'menus' && <MenusTab project={project} updateProject={updateProject} notify={notify} />}
@@ -175,6 +181,7 @@ export function ProjectWorkspace() {
           {activeTab === 'folders' && <FoldersTab project={project} updateProject={updateProject} notify={notify} />}
           {activeTab === 'tags' && <TagsTab project={project} updateProject={updateProject} notify={notify} />}
           {activeTab === 'scheduling' && <SchedulingTab project={project} updateProject={updateProject} notify={notify} />}
+          {activeTab === 'notifications' && <NotificationsTab />}
           {activeTab === 'preview' && <PreviewTab project={project} tokens={tokens} />}
           {activeTab === 'versions' && <VersionsTab project={project} createVersion={createVersion} restoreVersion={restoreVersion} notify={notify} />}
           {activeTab === 'export' && <ExportTab project={project} notify={notify} />}
@@ -2574,6 +2581,34 @@ function SchedulingTab({ project, updateProject, notify }: { project: any; updat
       <PageScheduleManager
         pages={project.pages}
         onUpdatePages={handleUpdatePages}
+      />
+    </div>
+  );
+}
+
+// DASHBOARD TAB
+function DashboardTab({ project }: { project: any }) {
+  return (
+    <div className="p-8">
+      <h1 className="text-2xl font-bold text-slate-900 mb-6">Analytics Dashboard</h1>
+      <AnalyticsDashboard
+        pages={project.pages}
+        folders={project.pageFolders || []}
+      />
+    </div>
+  );
+}
+
+// NOTIFICATIONS TAB
+function NotificationsTab() {
+  const [isOpen, setIsOpen] = useState(true);
+
+  return (
+    <div className="p-8">
+      <h1 className="text-2xl font-bold text-slate-900 mb-6">Notifications</h1>
+      <NotificationPanel
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
       />
     </div>
   );
