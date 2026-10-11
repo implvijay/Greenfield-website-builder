@@ -36,6 +36,10 @@ import { WorkflowTemplateManager } from '../components/WorkflowTemplateManager';
 import { AnalyticsExportDialog } from '../components/AnalyticsExportDialog';
 import { DesktopNotificationSettings } from '../components/DesktopNotificationSettings';
 import { CollaborationPanel } from '../components/CollaborationPanel';
+import { PerformanceDashboard } from '../components/PerformanceDashboard';
+import { AccessibilityAudit } from '../components/AccessibilityAudit';
+import { SEOAudit } from '../components/SEOAudit';
+import { PWASettings } from '../components/PWASettings';
 import { HistoryManager } from '../services/history';
 import { KeyboardShortcutManager, createBuilderShortcuts } from '../services/keyboardShortcuts';
 import { AutoSaveManager } from '../services/autoSave';
@@ -49,10 +53,10 @@ import {
   GripVertical, ChevronDown, ChevronRight, ArrowLeft, Save, Monitor,
   Tablet, Smartphone, Check, X, Edit3, Layers, Palette, Type,
   Star, Zap, Globe, Share2, Code, FileCode, Package, Folder, Tag, Calendar, Bell,
-  GitBranch, Users
+  GitBranch, Users, Activity, Accessibility
 } from 'lucide-react';
 
-type WorkspaceTab = 'overview' | 'pages' | 'builder' | 'menus' | 'media' | 'seo' | 'forms' | 'analytics' | 'blog' | 'preview' | 'versions' | 'export' | 'folders' | 'tags' | 'scheduling' | 'dashboard' | 'notifications' | 'changelog' | 'workflows' | 'collaboration' | 'notification-settings';
+type WorkspaceTab = 'overview' | 'pages' | 'builder' | 'menus' | 'media' | 'seo' | 'forms' | 'analytics' | 'blog' | 'preview' | 'versions' | 'export' | 'folders' | 'tags' | 'scheduling' | 'dashboard' | 'notifications' | 'changelog' | 'workflows' | 'collaboration' | 'notification-settings' | 'performance' | 'accessibility' | 'seo-audit' | 'pwa';
 
 // Draggable Section Component
 function DraggableSection({ id, children, isSelected, onClick }: { id: string; children: React.ReactNode; isSelected: boolean; onClick: () => void }) {
@@ -129,6 +133,10 @@ export function ProjectWorkspace() {
     { id: 'workflows', label: 'Workflows', icon: GitBranch },
     { id: 'collaboration', label: 'Collaboration', icon: Users },
     { id: 'notification-settings', label: 'Notification Settings', icon: Bell },
+    { id: 'performance', label: 'Performance', icon: Activity },
+    { id: 'accessibility', label: 'Accessibility', icon: Accessibility },
+    { id: 'seo-audit', label: 'SEO Audit', icon: Search },
+    { id: 'pwa', label: 'PWA Settings', icon: Smartphone },
     { id: 'preview', label: 'Preview', icon: Eye },
     { id: 'versions', label: 'Versions', icon: History },
     { id: 'export', label: 'Export', icon: Download },
@@ -196,6 +204,10 @@ export function ProjectWorkspace() {
           {activeTab === 'workflows' && <WorkflowsTab />}
           {activeTab === 'collaboration' && <CollaborationTab />}
           {activeTab === 'notification-settings' && <NotificationSettingsTab />}
+          {activeTab === 'performance' && <PerformanceTab />}
+          {activeTab === 'accessibility' && <AccessibilityTab pages={project.pages} />}
+          {activeTab === 'seo-audit' && <SEOAuditTab pages={project.pages} />}
+          {activeTab === 'pwa' && <PWATab />}
           {activeTab === 'preview' && <PreviewTab project={project} tokens={tokens} />}
           {activeTab === 'versions' && <VersionsTab project={project} createVersion={createVersion} restoreVersion={restoreVersion} notify={notify} />}
           {activeTab === 'export' && <ExportTab project={project} notify={notify} />}
@@ -2660,6 +2672,38 @@ function NotificationSettingsTab() {
     <div className="p-8">
       <h1 className="text-2xl font-bold text-slate-900 mb-6">Desktop Notification Settings</h1>
       <DesktopNotificationSettings />
+    </div>
+  );
+}
+
+function PerformanceTab() {
+  return (
+    <div className="p-8">
+      <PerformanceDashboard />
+    </div>
+  );
+}
+
+function AccessibilityTab({ pages }: { pages: any[] }) {
+  return (
+    <div className="p-8">
+      <AccessibilityAudit pages={pages} />
+    </div>
+  );
+}
+
+function SEOAuditTab({ pages }: { pages: any[] }) {
+  return (
+    <div className="p-8">
+      <SEOAudit pages={pages} />
+    </div>
+  );
+}
+
+function PWATab() {
+  return (
+    <div className="p-8">
+      <PWASettings />
     </div>
   );
 }
