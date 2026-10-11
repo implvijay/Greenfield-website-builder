@@ -31,6 +31,11 @@ import { PageScheduleManager } from '../components/PageScheduleManager';
 import { AnalyticsDashboard } from '../components/AnalyticsDashboard';
 import { NotificationPanel, NotificationBell } from '../components/NotificationPanel';
 import { WorkflowPanel } from '../components/WorkflowPanel';
+import { ChangeLog } from '../components/ChangeLog';
+import { WorkflowTemplateManager } from '../components/WorkflowTemplateManager';
+import { AnalyticsExportDialog } from '../components/AnalyticsExportDialog';
+import { DesktopNotificationSettings } from '../components/DesktopNotificationSettings';
+import { CollaborationPanel } from '../components/CollaborationPanel';
 import { HistoryManager } from '../services/history';
 import { KeyboardShortcutManager, createBuilderShortcuts } from '../services/keyboardShortcuts';
 import { AutoSaveManager } from '../services/autoSave';
@@ -43,10 +48,11 @@ import {
   BarChart3, Eye, History, Download, Settings, Plus, Trash2, Copy,
   GripVertical, ChevronDown, ChevronRight, ArrowLeft, Save, Monitor,
   Tablet, Smartphone, Check, X, Edit3, Layers, Palette, Type,
-  Star, Zap, Globe, Share2, Code, FileCode, Package, Folder, Tag, Calendar, Bell
+  Star, Zap, Globe, Share2, Code, FileCode, Package, Folder, Tag, Calendar, Bell,
+  GitBranch, Users
 } from 'lucide-react';
 
-type WorkspaceTab = 'overview' | 'pages' | 'builder' | 'menus' | 'media' | 'seo' | 'forms' | 'analytics' | 'blog' | 'preview' | 'versions' | 'export' | 'folders' | 'tags' | 'scheduling' | 'dashboard' | 'notifications';
+type WorkspaceTab = 'overview' | 'pages' | 'builder' | 'menus' | 'media' | 'seo' | 'forms' | 'analytics' | 'blog' | 'preview' | 'versions' | 'export' | 'folders' | 'tags' | 'scheduling' | 'dashboard' | 'notifications' | 'changelog' | 'workflows' | 'collaboration' | 'notification-settings';
 
 // Draggable Section Component
 function DraggableSection({ id, children, isSelected, onClick }: { id: string; children: React.ReactNode; isSelected: boolean; onClick: () => void }) {
@@ -119,6 +125,10 @@ export function ProjectWorkspace() {
     { id: 'tags', label: 'Tags', icon: Tag },
     { id: 'scheduling', label: 'Scheduling', icon: Calendar },
     { id: 'notifications', label: 'Notifications', icon: Bell },
+    { id: 'changelog', label: 'Change Log', icon: History },
+    { id: 'workflows', label: 'Workflows', icon: GitBranch },
+    { id: 'collaboration', label: 'Collaboration', icon: Users },
+    { id: 'notification-settings', label: 'Notification Settings', icon: Bell },
     { id: 'preview', label: 'Preview', icon: Eye },
     { id: 'versions', label: 'Versions', icon: History },
     { id: 'export', label: 'Export', icon: Download },
@@ -182,6 +192,10 @@ export function ProjectWorkspace() {
           {activeTab === 'tags' && <TagsTab project={project} updateProject={updateProject} notify={notify} />}
           {activeTab === 'scheduling' && <SchedulingTab project={project} updateProject={updateProject} notify={notify} />}
           {activeTab === 'notifications' && <NotificationsTab />}
+          {activeTab === 'changelog' && <ChangeLogTab />}
+          {activeTab === 'workflows' && <WorkflowsTab />}
+          {activeTab === 'collaboration' && <CollaborationTab />}
+          {activeTab === 'notification-settings' && <NotificationSettingsTab />}
           {activeTab === 'preview' && <PreviewTab project={project} tokens={tokens} />}
           {activeTab === 'versions' && <VersionsTab project={project} createVersion={createVersion} restoreVersion={restoreVersion} notify={notify} />}
           {activeTab === 'export' && <ExportTab project={project} notify={notify} />}
@@ -2610,6 +2624,42 @@ function NotificationsTab() {
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}
       />
+    </div>
+  );
+}
+
+function ChangeLogTab() {
+  return (
+    <div className="p-8">
+      <h1 className="text-2xl font-bold text-slate-900 mb-6">Change Log</h1>
+      <ChangeLog />
+    </div>
+  );
+}
+
+function WorkflowsTab() {
+  return (
+    <div className="p-8">
+      <h1 className="text-2xl font-bold text-slate-900 mb-6">Workflow Templates</h1>
+      <WorkflowTemplateManager currentUserId="current-user" />
+    </div>
+  );
+}
+
+function CollaborationTab() {
+  return (
+    <div className="p-8">
+      <h1 className="text-2xl font-bold text-slate-900 mb-6">Collaboration</h1>
+      <CollaborationPanel />
+    </div>
+  );
+}
+
+function NotificationSettingsTab() {
+  return (
+    <div className="p-8">
+      <h1 className="text-2xl font-bold text-slate-900 mb-6">Desktop Notification Settings</h1>
+      <DesktopNotificationSettings />
     </div>
   );
 }
