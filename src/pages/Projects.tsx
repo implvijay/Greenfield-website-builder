@@ -30,9 +30,9 @@ export function ProjectsPage() {
   };
 
   const handleDelete = (id: string, name: string) => {
-    if (confirm(`Delete project "${name}"? This cannot be undone.`)) {
+    if (confirm(`Are you sure you want to delete project "${name}"?\n\nThis action cannot be undone and will permanently delete all pages, sections, and content.`)) {
       deleteProject(id);
-      notify('success', 'Project deleted');
+      notify('success', `Project "${name}" deleted successfully`);
     }
   };
 
@@ -101,11 +101,18 @@ export function ProjectsPage() {
                       <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center text-xl">
                         {industry?.icon || '🌐'}
                       </div>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-1">
                         <button onClick={() => { setCurrentProject(project.id); navigate(`/projects/${project.id}`); }} className="p-1.5 text-slate-400 hover:text-indigo-600 rounded" title="Open">
                           <Eye size={14} />
                         </button>
-                        <button onClick={() => handleDelete(project.id, project.name)} className="p-1.5 text-slate-400 hover:text-red-500 rounded" title="Delete">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(project.id, project.name);
+                          }} 
+                          className="p-1.5 text-slate-400 hover:text-red-500 rounded" 
+                          title="Delete"
+                        >
                           <Trash2 size={14} />
                         </button>
                       </div>

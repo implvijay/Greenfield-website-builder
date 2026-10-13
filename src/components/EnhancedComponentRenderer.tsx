@@ -58,7 +58,10 @@ export function InlineEditable({
             value={editValue}
             onChange={(e) => setEditValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            onBlur={handleSave}
+            onBlur={() => {
+              // Small delay to allow button clicks to register
+              setTimeout(() => handleSave(), 100);
+            }}
             autoFocus
             className={`${className} w-full p-2 border-2 border-indigo-500 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y min-h-[100px]`}
             style={style}
@@ -70,24 +73,33 @@ export function InlineEditable({
             value={editValue}
             onChange={(e) => setEditValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            onBlur={handleSave}
+            onBlur={() => {
+              // Small delay to allow button clicks to register
+              setTimeout(() => handleSave(), 100);
+            }}
             autoFocus
             className={`${className} w-full p-2 border-2 border-indigo-500 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500`}
             style={style}
             placeholder={placeholder}
           />
         )}
-        <div className="absolute -top-8 right-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute -top-8 right-0 flex gap-1">
           <button
-            onClick={handleSave}
-            className="p-1 bg-green-500 text-white rounded hover:bg-green-600"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleSave();
+            }}
+            className="p-1 bg-green-500 text-white rounded hover:bg-green-600 shadow-md"
             title="Save (Enter)"
           >
             <Check size={14} />
           </button>
           <button
-            onClick={handleCancel}
-            className="p-1 bg-red-500 text-white rounded hover:bg-red-600"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleCancel();
+            }}
+            className="p-1 bg-red-500 text-white rounded hover:bg-red-600 shadow-md"
             title="Cancel (Esc)"
           >
             <X size={14} />
@@ -99,7 +111,8 @@ export function InlineEditable({
 
   return (
     <div
-      onClick={() => {
+      onClick={(e) => {
+        e.stopPropagation();
         setEditValue(value);
         setIsEditing(true);
       }}
@@ -109,8 +122,9 @@ export function InlineEditable({
     >
       {value || <span className="text-gray-400 italic">{placeholder}</span>}
       <div className="absolute -top-6 right-0 opacity-0 group-hover:opacity-100 transition-opacity">
-        <div className="p-1 bg-indigo-500 text-white rounded shadow-lg">
+        <div className="p-1 bg-indigo-500 text-white rounded shadow-lg flex items-center gap-1">
           <Edit3 size={12} />
+          <span className="text-xs">Edit</span>
         </div>
       </div>
     </div>

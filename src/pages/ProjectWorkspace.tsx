@@ -633,6 +633,7 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
       };
     });
     updatePages(updatedPages, 'Update Component');
+    notify('success', 'Content updated');
   };
 
   // Panel handlers
