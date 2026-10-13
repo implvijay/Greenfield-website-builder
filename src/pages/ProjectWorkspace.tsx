@@ -44,6 +44,8 @@ import { BusinessIntelligenceDashboard } from '../components/BusinessIntelligenc
 import { ABTestingManager } from '../components/ABTestingManager';
 import { ConversionTracking } from '../components/ConversionTracking';
 import { FunnelAnalyzer } from '../components/FunnelAnalyzer';
+import { ChartBuilder } from '../components/ChartBuilder';
+import { ReportBuilder } from '../components/ReportBuilder';
 import { HistoryManager } from '../services/history';
 import { KeyboardShortcutManager, createBuilderShortcuts } from '../services/keyboardShortcuts';
 import { AutoSaveManager } from '../services/autoSave';
@@ -60,7 +62,7 @@ import {
   GitBranch, Users, Activity, Accessibility, FlaskConical, Target
 } from 'lucide-react';
 
-type WorkspaceTab = 'overview' | 'pages' | 'builder' | 'menus' | 'media' | 'seo' | 'forms' | 'analytics' | 'blog' | 'preview' | 'versions' | 'export' | 'folders' | 'tags' | 'scheduling' | 'dashboard' | 'notifications' | 'changelog' | 'workflows' | 'collaboration' | 'notification-settings' | 'performance' | 'accessibility' | 'seo-audit' | 'pwa' | 'business-intelligence' | 'ab-testing' | 'conversions' | 'funnels';
+type WorkspaceTab = 'overview' | 'pages' | 'builder' | 'menus' | 'media' | 'seo' | 'forms' | 'analytics' | 'blog' | 'preview' | 'versions' | 'export' | 'folders' | 'tags' | 'scheduling' | 'dashboard' | 'notifications' | 'changelog' | 'workflows' | 'collaboration' | 'notification-settings' | 'performance' | 'accessibility' | 'seo-audit' | 'pwa' | 'business-intelligence' | 'ab-testing' | 'conversions' | 'funnels' | 'charts' | 'reports';
 
 // Draggable Section Component
 function DraggableSection({ id, children, isSelected, onClick }: { id: string; children: React.ReactNode; isSelected: boolean; onClick: () => void }) {
@@ -145,6 +147,8 @@ export function ProjectWorkspace() {
     { id: 'ab-testing', label: 'A/B Testing', icon: FlaskConical },
     { id: 'conversions', label: 'Conversions', icon: Target },
     { id: 'funnels', label: 'Funnels', icon: GitBranch },
+    { id: 'charts', label: 'Charts', icon: BarChart3 },
+    { id: 'reports', label: 'Reports', icon: FileText },
     { id: 'preview', label: 'Preview', icon: Eye },
     { id: 'versions', label: 'Versions', icon: History },
     { id: 'export', label: 'Export', icon: Download },
@@ -220,6 +224,8 @@ export function ProjectWorkspace() {
           {activeTab === 'ab-testing' && <ABTestingTab />}
           {activeTab === 'conversions' && <ConversionsTab />}
           {activeTab === 'funnels' && <FunnelsTab />}
+          {activeTab === 'charts' && <ChartsTab />}
+          {activeTab === 'reports' && <ReportsTab />}
           {activeTab === 'preview' && <PreviewTab project={project} tokens={tokens} />}
           {activeTab === 'versions' && <VersionsTab project={project} createVersion={createVersion} restoreVersion={restoreVersion} notify={notify} />}
           {activeTab === 'export' && <ExportTab project={project} notify={notify} />}
@@ -2753,6 +2759,22 @@ function FunnelsTab() {
   return (
     <div className="p-8">
       <FunnelAnalyzer />
+    </div>
+  );
+}
+
+function ChartsTab() {
+  return (
+    <div className="p-8">
+      <ChartBuilder />
+    </div>
+  );
+}
+
+function ReportsTab() {
+  return (
+    <div className="p-8">
+      <ReportBuilder />
     </div>
   );
 }
