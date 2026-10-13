@@ -199,7 +199,7 @@ function getProjectData(projectId: string): any {
   }
 }
 
-function saveProjectData(projectId: string,  any): void {
+function saveProjectData(projectId: string, data: any): void {
   localStorage.setItem(`greenfield_project_${projectId}`, JSON.stringify(data));
 }
 
@@ -301,7 +301,7 @@ export function exportToCSV(data: any[], filename: string): void {
 }
 
 // Export to JSON
-export function exportToJSON( any, filename: string): void {
+export function exportToJSON(data: any, filename: string): void {
   const jsonString = JSON.stringify(data, null, 2);
   const blob = new Blob([jsonString], { type: 'application/json' });
   const link = document.createElement('a');

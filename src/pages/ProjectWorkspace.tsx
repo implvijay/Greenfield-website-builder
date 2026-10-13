@@ -46,6 +46,7 @@ import { ConversionTracking } from '../components/ConversionTracking';
 import { FunnelAnalyzer } from '../components/FunnelAnalyzer';
 import { ChartBuilder } from '../components/ChartBuilder';
 import { ReportBuilder } from '../components/ReportBuilder';
+import { EnhancedComponentRenderer } from '../components/EnhancedComponentRenderer';
 import { HistoryManager } from '../services/history';
 import { KeyboardShortcutManager, createBuilderShortcuts } from '../services/keyboardShortcuts';
 import { AutoSaveManager } from '../services/autoSave';
@@ -1655,7 +1656,7 @@ function SectionRenderer({ section, tokens, editable, onUpdate, onComponentClick
                         }}
                         className={`relative ${editable ? 'cursor-pointer hover:ring-2 hover:ring-indigo-400 hover:ring-offset-2 rounded transition-all' : ''} ${isSelected ? 'ring-2 ring-indigo-500 ring-offset-2' : ''}`}
                       >
-                        <ComponentRenderer
+                        <EnhancedComponentRenderer
                           component={comp}
                           tokens={tokens}
                           textColor={textColor}
@@ -1685,214 +1686,8 @@ function SectionRenderer({ section, tokens, editable, onUpdate, onComponentClick
   );
 }
 
-// Component Renderer
-function ComponentRenderer({ component, tokens, textColor, editable, onUpdate }: { component: any; tokens: DesignTokens; textColor: string; editable?: boolean; onUpdate?: (props: any) => void }) {
-  const { type, props } = component;
-
-  switch (type) {
-    case 'heading':
-      const Tag = `h${props.level || 2}` as any;
-      const sizeMap: Record<string, string> = { '5xl': '3rem', '4xl': '2.5rem', '3xl': '2rem', '2xl': '1.5rem', 'xl': '1.25rem' };
-      return editable ? (
-        <Tag
-          contentEditable
-          suppressContentEditableWarning
-          onBlur={(e: any) => onUpdate?.({ text: e.target.innerText })}
-          style={{ fontFamily: tokens.typography.headingFont, fontWeight: tokens.typography.headingWeight, fontSize: sizeMap[props.size] || '2rem', color: textColor, marginBottom: '0.75rem', lineHeight: '1.2' }}
-        >
-          {props.text}
-        </Tag>
-      ) : (
-        <Tag style={{ fontFamily: tokens.typography.headingFont, fontWeight: tokens.typography.headingWeight, fontSize: sizeMap[props.size] || '2rem', color: textColor, marginBottom: '0.75rem', lineHeight: '1.2' }}>
-          {props.text}
-        </Tag>
-      );
-
-    case 'paragraph':
-      return editable ? (
-        <p
-          contentEditable
-          suppressContentEditableWarning
-          onBlur={(e: any) => onUpdate?.({ text: e.target.innerText })}
-          style={{ fontFamily: tokens.typography.bodyFont, fontSize: tokens.typography.bodySize, color: textColor, opacity: 0.85, lineHeight: tokens.typography.lineHeight, marginBottom: '1rem', maxWidth: '600px', margin: '0 auto 1rem' }}
-        >
-          {props.text}
-        </p>
-      ) : (
-        <p style={{ fontFamily: tokens.typography.bodyFont, fontSize: tokens.typography.bodySize, color: textColor, opacity: 0.85, lineHeight: tokens.typography.lineHeight, marginBottom: '1rem', maxWidth: '600px', margin: '0 auto 1rem' }}>
-          {props.text}
-        </p>
-      );
-
-    case 'text':
-      return (
-        <div style={{ fontFamily: tokens.typography.bodyFont, fontSize: tokens.typography.bodySize, color: textColor, opacity: 0.85, lineHeight: '1.8', whiteSpace: 'pre-line' }}>
-          {props.text}
-        </div>
-      );
-
-    case 'button-group':
-      return (
-        <div className="flex flex-wrap gap-3 justify-center mt-4">
-          {(props.buttons || []).map((btn: any, i: number) => (
-            <button
-              key={i}
-              style={{
-                padding: '0.75rem 1.5rem',
-                borderRadius: tokens.borderRadius,
-                fontWeight: '600',
-                fontSize: '0.9rem',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                ...(btn.variant === 'primary' ? {
-                  backgroundColor: tokens.colors.primary,
-                  color: '#ffffff',
-                  border: 'none',
-                } : {
-                  backgroundColor: 'transparent',
-                  color: textColor,
-                  border: `2px solid ${textColor}30`,
-                }),
-              }}
-            >
-              {btn.label}
-            </button>
-          ))}
-        </div>
-      );
-
-    case 'image':
-      return (
-        <div className="mb-4">
-          {props.src ? (
-            <img src={props.src} alt={props.alt || ''} style={{ width: '100%', borderRadius: tokens.borderRadius, objectFit: 'cover' }} />
-          ) : (
-            <div style={{ width: '100%', height: '200px', backgroundColor: tokens.colors.surfaceAlt, borderRadius: tokens.borderRadius, display: 'flex', alignItems: 'center', justifyContent: 'center', color: tokens.colors.textMuted }}>
-              🖼️ Image placeholder
-            </div>
-          )}
-        </div>
-      );
-
-    case 'card':
-      return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-          {(props.cards || []).map((card: any, i: number) => (
-            <div key={i} style={{ backgroundColor: tokens.colors.surface, borderRadius: tokens.borderRadius, padding: '1.5rem', border: `1px solid ${tokens.colors.border}`, textAlign: 'center' }}>
-              {card.icon && <span className="text-3xl mb-3 block">{card.icon}</span>}
-              {card.image && <img src={card.image} alt="" style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: tokens.borderRadius, marginBottom: '1rem' }} />}
-              <h4 style={{ fontWeight: '600', color: textColor, marginBottom: '0.5rem' }}>{card.title}</h4>
-              <p style={{ fontSize: '0.875rem', color: textColor, opacity: 0.7 }}>{card.description}</p>
-            </div>
-          ))}
-        </div>
-      );
-
-    case 'stat':
-      return (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-4">
-          {(props.stats || []).map((stat: any, i: number) => (
-            <div key={i} className="text-center">
-              <p style={{ fontSize: '2.5rem', fontWeight: '800', color: tokens.colors.primary, lineHeight: '1' }}>{stat.value}</p>
-              <p style={{ fontSize: '0.875rem', color: textColor, opacity: 0.7, marginTop: '0.5rem' }}>{stat.label}</p>
-            </div>
-          ))}
-        </div>
-      );
-
-    case 'testimonial':
-      return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-          {(props.testimonials || []).map((t: any, i: number) => (
-            <div key={i} style={{ backgroundColor: tokens.colors.surface, borderRadius: tokens.borderRadius, padding: '1.5rem', border: `1px solid ${tokens.colors.border}` }}>
-              <p style={{ fontSize: '0.9rem', color: textColor, opacity: 0.8, lineHeight: '1.7', marginBottom: '1rem', fontStyle: 'italic' }}>"{t.text}"</p>
-              <div>
-                <p style={{ fontWeight: '600', color: textColor, fontSize: '0.875rem' }}>{t.name}</p>
-                <p style={{ fontSize: '0.75rem', color: textColor, opacity: 0.6 }}>{t.role}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      );
-
-    case 'team-member':
-      return (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-6">
-          {(props.members || []).map((m: any, i: number) => (
-            <div key={i} className="text-center">
-              <div style={{ width: '80px', height: '80px', borderRadius: '50%', backgroundColor: tokens.colors.surfaceAlt, margin: '0 auto 0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}>
-                👤
-              </div>
-              <p style={{ fontWeight: '600', color: textColor, fontSize: '0.875rem' }}>{m.name}</p>
-              <p style={{ fontSize: '0.75rem', color: textColor, opacity: 0.6 }}>{m.role}</p>
-            </div>
-          ))}
-        </div>
-      );
-
-    case 'pricing-card':
-      return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-          {(props.plans || []).map((plan: any, i: number) => (
-            <div key={i} style={{
-              backgroundColor: plan.popular ? tokens.colors.primary : tokens.colors.surface,
-              color: plan.popular ? '#ffffff' : textColor,
-              borderRadius: tokens.borderRadius,
-              padding: '2rem',
-              border: `1px solid ${plan.popular ? tokens.colors.primary : tokens.colors.border}`,
-              textAlign: 'center',
-              position: 'relative',
-            }}>
-              {plan.popular && <span style={{ position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)', backgroundColor: tokens.colors.accent, color: '#fff', padding: '2px 12px', borderRadius: '99px', fontSize: '0.7rem', fontWeight: '600' }}>Popular</span>}
-              <h4 style={{ fontWeight: '700', fontSize: '1.1rem', marginBottom: '0.5rem' }}>{plan.name}</h4>
-              <p style={{ fontSize: '2.5rem', fontWeight: '800', marginBottom: '0.25rem' }}>{plan.price}</p>
-              <p style={{ fontSize: '0.8rem', opacity: 0.7, marginBottom: '1.5rem' }}>{plan.period}</p>
-              <ul style={{ listStyle: 'none', padding: 0, textAlign: 'left', marginBottom: '1.5rem' }}>
-                {(plan.features || []).map((f: string, fi: number) => (
-                  <li key={fi} style={{ padding: '0.4rem 0', fontSize: '0.85rem', borderBottom: `1px solid ${plan.popular ? 'rgba(255,255,255,0.1)' : tokens.colors.border}` }}>✓ {f}</li>
-                ))}
-              </ul>
-              <button style={{
-                width: '100%', padding: '0.6rem', borderRadius: tokens.borderRadius, fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer',
-                backgroundColor: plan.popular ? '#ffffff' : tokens.colors.primary,
-                color: plan.popular ? tokens.colors.primary : '#ffffff',
-                border: 'none',
-              }}>Get Started</button>
-            </div>
-          ))}
-        </div>
-      );
-
-    case 'faq-item':
-      return (
-        <div className="mt-6 max-w-2xl mx-auto space-y-3">
-          {(props.items || []).map((item: any, i: number) => (
-            <details key={i} style={{ backgroundColor: tokens.colors.surface, borderRadius: tokens.borderRadius, border: `1px solid ${tokens.colors.border}`, padding: '1rem 1.25rem' }}>
-              <summary style={{ fontWeight: '600', color: textColor, cursor: 'pointer', fontSize: '0.95rem' }}>{item.question}</summary>
-              <p style={{ marginTop: '0.75rem', fontSize: '0.875rem', color: textColor, opacity: 0.75, lineHeight: '1.7' }}>{item.answer}</p>
-            </details>
-          ))}
-        </div>
-      );
-
-    case 'form-field':
-      return (
-        <div className="mt-4 space-y-3 max-w-md">
-          <input type="text" placeholder="Your Name" style={{ width: '100%', padding: '0.75rem', borderRadius: tokens.borderRadius, border: `1px solid ${tokens.colors.border}`, fontSize: '0.9rem' }} />
-          <input type="email" placeholder="Your Email" style={{ width: '100%', padding: '0.75rem', borderRadius: tokens.borderRadius, border: `1px solid ${tokens.colors.border}`, fontSize: '0.9rem' }} />
-          <textarea placeholder="Your Message" rows={4} style={{ width: '100%', padding: '0.75rem', borderRadius: tokens.borderRadius, border: `1px solid ${tokens.colors.border}`, fontSize: '0.9rem', resize: 'vertical' }} />
-          <button style={{ padding: '0.75rem 1.5rem', backgroundColor: tokens.colors.primary, color: '#fff', borderRadius: tokens.borderRadius, fontWeight: '600', cursor: 'pointer', border: 'none' }}>Send Message</button>
-        </div>
-      );
-
-    default:
-      return (
-        <div style={{ padding: '1rem', backgroundColor: tokens.colors.surfaceAlt, borderRadius: tokens.borderRadius, textAlign: 'center', color: tokens.colors.textMuted, fontSize: '0.85rem' }}>
-          [{type}] Component
-        </div>
-      );
-  }
-}
+// Component Renderer - Now using EnhancedComponentRenderer
+const ComponentRenderer = EnhancedComponentRenderer;
 
 // MENUS TAB
 function MenusTab({ project, updateProject, notify }: { project: any; updateProject: any; notify: any }) {
