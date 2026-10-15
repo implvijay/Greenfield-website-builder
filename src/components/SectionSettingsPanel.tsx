@@ -58,14 +58,67 @@ export function SectionSettingsPanel({ section, onUpdate, onClose }: SectionSett
                 onChange={e => onUpdate({ padding: e.target.value })}
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
+                <option value="1rem 0">Extra Small (1rem)</option>
                 <option value="2rem 0">Small (2rem)</option>
+                <option value="3rem 0">Medium Small (3rem)</option>
                 <option value="4rem 0">Medium (4rem)</option>
+                <option value="5rem 0">Medium Large (5rem)</option>
                 <option value="6rem 0">Large (6rem)</option>
                 <option value="8rem 0">Extra Large (8rem)</option>
+                <option value="10rem 0">Huge (10rem)</option>
+                <option value="custom">Custom...</option>
               </select>
+              {section.settings.padding === 'custom' && (
+                <input
+                  type="text"
+                  value={section.settings.padding || ''}
+                  onChange={e => onUpdate({ padding: e.target.value })}
+                  placeholder="e.g., 2rem 1rem"
+                  className="w-full mt-2 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              )}
             </div>
 
-            {/* Max Width */}
+            {/* Margin */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Margin</label>
+              <input
+                type="text"
+                value={section.settings.margin || '0'}
+                onChange={e => onUpdate({ margin: e.target.value })}
+                placeholder="e.g., 2rem 0 or 1rem auto"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+              <p className="text-xs text-slate-500 mt-1">CSS margin value (e.g., 2rem 0, 1rem auto)</p>
+            </div>
+
+            {/* Min Height */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Minimum Height</label>
+              <select
+                value={section.settings.minHeight || 'auto'}
+                onChange={e => onUpdate({ minHeight: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="auto">Auto</option>
+                <option value="200px">Small (200px)</option>
+                <option value="400px">Medium (400px)</option>
+                <option value="600px">Large (600px)</option>
+                <option value="100vh">Full Viewport (100vh)</option>
+                <option value="custom">Custom...</option>
+              </select>
+              {section.settings.minHeight === 'custom' && (
+                <input
+                  type="text"
+                  value={section.settings.minHeight || ''}
+                  onChange={e => onUpdate({ minHeight: e.target.value })}
+                  placeholder="e.g., 500px or 50vh"
+                  className="w-full mt-2 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              )}
+            </div>
+
+            {/* Container Width */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">Container Width</label>
               <select
@@ -73,10 +126,30 @@ export function SectionSettingsPanel({ section, onUpdate, onClose }: SectionSett
                 onChange={e => onUpdate({ maxWidth: e.target.value })}
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
-                <option value="800px">Narrow (800px)</option>
+                <option value="600px">Narrow (600px)</option>
+                <option value="800px">Medium Narrow (800px)</option>
                 <option value="1000px">Medium (1000px)</option>
                 <option value="1200px">Wide (1200px)</option>
                 <option value="1400px">Extra Wide (1400px)</option>
+                <option value="1600px">Full HD (1600px)</option>
+                <option value="100%">100% Width</option>
+              </select>
+            </div>
+
+            {/* Section Width */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Section Width</label>
+              <select
+                value={section.settings.width || '100%'}
+                onChange={e => onUpdate({ width: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="100%">Full Width (100%)</option>
+                <option value="90%">90%</option>
+                <option value="80%">80%</option>
+                <option value="70%">70%</option>
+                <option value="60%">60%</option>
+                <option value="50%">Half Width (50%)</option>
               </select>
             </div>
 
@@ -92,6 +165,58 @@ export function SectionSettingsPanel({ section, onUpdate, onClose }: SectionSett
                 onChange={e => onUpdate({ fullWidth: e.target.checked })}
                 className="rounded"
               />
+            </div>
+
+            {/* Number of Columns */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Number of Columns</label>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5, 6].map(num => (
+                  <button
+                    key={num}
+                    onClick={() => {
+                      // Update all rows to have the specified number of columns
+                      const updatedRows = section.rows.map(row => {
+                        const currentColumns = row.columns;
+                        if (currentColumns.length === num) return row;
+                        
+                        if (currentColumns.length < num) {
+                          // Add columns
+                          const newColumns = [...currentColumns];
+                          while (newColumns.length < num) {
+                            newColumns.push({
+                              id: crypto.randomUUID(),
+                              width: 100 / num,
+                              components: []
+                            });
+                          }
+                          // Adjust widths
+                          return {
+                            ...row,
+                            columns: newColumns.map(col => ({ ...col, width: 100 / num }))
+                          };
+                        } else {
+                          // Remove columns (keep first ones)
+                          const newColumns = currentColumns.slice(0, num);
+                          return {
+                            ...row,
+                            columns: newColumns.map(col => ({ ...col, width: 100 / num }))
+                          };
+                        }
+                      });
+                      onUpdate({ rows: updatedRows } as any);
+                    }}
+                    className={`flex-1 px-3 py-2 border rounded-lg transition-colors ${
+                      section.rows[0]?.columns.length === num
+                        ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                        : 'border-slate-200 hover:border-slate-300 text-slate-600'
+                    }`}
+                  >
+                    {num}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-slate-500 mt-1">Adjust the number of columns in each row</p>
             </div>
 
             {/* Text Alignment */}

@@ -168,6 +168,9 @@ export interface SectionSettings {
   overlay?: boolean;
   overlayOpacity?: number;
   padding?: string;
+  margin?: string;
+  minHeight?: string;
+  width?: string;
   maxWidth?: string;
   fullWidth?: boolean;
   textAlign?: 'left' | 'center' | 'right';

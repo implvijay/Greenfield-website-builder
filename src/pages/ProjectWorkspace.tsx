@@ -82,10 +82,22 @@ function DraggableSection({ id, children, isSelected, onClick }: { id: string; c
       className={`group relative bg-white rounded-lg border-2 transition-all ${
         isDragging ? 'opacity-50 shadow-2xl' : ''
       } ${isSelected ? 'border-indigo-500 shadow-lg' : 'border-transparent hover:border-slate-300'}`}
-      onClick={onClick}
+      onClick={(e) => {
+        // Only select section if clicking on the border/empty area, not on content
+        const target = e.target as HTMLElement;
+        if (target.closest('[data-component-content]')) {
+          return; // Don't select if clicking on component content
+        }
+        onClick();
+      }}
       {...listeners}
       {...attributes}
     >
+      {/* Drag handle area at the top */}
+      <div 
+        className="absolute top-0 left-0 right-0 h-2 cursor-move bg-transparent hover:bg-indigo-100 z-20"
+        title="Drag to reorder"
+      />
       {children}
     </div>
   );
@@ -918,8 +930,13 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
 
   // Template insertion handler
   const handleInsertTemplateComponent = (component: any) => {
-    if (!selectedSectionId) {
-      notify('error', 'Please select a section first');
+    // Auto-select first section if none selected
+    let targetSectionId = selectedSectionId;
+    if (!targetSectionId && page.sections.length > 0) {
+      targetSectionId = page.sections[0].id;
+      setSelectedSectionId(targetSectionId);
+    } else if (!targetSectionId) {
+      notify('error', 'Please add a section first');
       return;
     }
 
@@ -928,7 +945,7 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
       return {
         ...p,
         sections: p.sections.map(s => {
-          if (s.id !== selectedSectionId) return s;
+          if (s.id !== targetSectionId) return s;
           return {
             ...s,
             rows: s.rows.map((r, rowIndex) => {
@@ -1022,8 +1039,13 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
 
   // Component library handler
   const handleComponentSelect = (componentType: string) => {
-    if (!selectedSectionId) {
-      notify('error', 'Please select a section first');
+    // Auto-select first section if none selected
+    let targetSectionId = selectedSectionId;
+    if (!targetSectionId && page.sections.length > 0) {
+      targetSectionId = page.sections[0].id;
+      setSelectedSectionId(targetSectionId);
+    } else if (!targetSectionId) {
+      notify('error', 'Please add a section first');
       return;
     }
 
@@ -1072,7 +1094,7 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
       return {
         ...p,
         sections: p.sections.map((s: Section) => {
-          if (s.id !== selectedSectionId) return s;
+          if (s.id !== targetSectionId) return s;
           // Add component to the first column of the first row
           if (s.rows.length === 0) {
             return {
@@ -1295,19 +1317,29 @@ function BuilderTab({ project, updateProject, tokens, notify }: { project: any; 
         </button>
 
         <button
-          onClick={() => setShowComponentLibrary(true)}
-          disabled={!selectedSectionId}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-          title={selectedSectionId ? 'Add component to selected section' : 'Select a section first'}
+          onClick={() => {
+            if (!selectedSectionId && page.sections.length > 0) {
+              // Auto-select first section if none selected
+              setSelectedSectionId(page.sections[0].id);
+            }
+            setShowComponentLibrary(true);
+          }}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium rounded-lg"
+          title="Add component to section"
         >
           <Package size={14} /> Components
         </button>
 
         <button
-          onClick={() => setShowTemplatesPanel(true)}
-          disabled={!selectedSectionId}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-          title={selectedSectionId ? 'Insert component template' : 'Select a section first'}
+          onClick={() => {
+            if (!selectedSectionId && page.sections.length > 0) {
+              // Auto-select first section if none selected
+              setSelectedSectionId(page.sections[0].id);
+            }
+            setShowTemplatesPanel(true);
+          }}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg"
+          title="Insert component template"
         >
           <Layers size={14} /> Templates
         </button>
@@ -1633,8 +1665,16 @@ function SectionRenderer({ section, tokens, editable, onUpdate, onComponentClick
   const textColor = section.settings.background === 'gradient' ? '#ffffff' : tokens.colors.text;
 
   return (
-    <div style={{ ...bgStyle, padding: section.settings.padding || '3rem 1.5rem' }}>
-      <div style={{ maxWidth: section.settings.fullWidth ? '100%' : tokens.spacing.container, margin: '0 auto' }}>
+    <div 
+      data-component-content
+      style={{ 
+        ...bgStyle, 
+        padding: section.settings.padding || '3rem 1.5rem',
+        margin: section.settings.margin || '0',
+        minHeight: section.settings.minHeight || 'auto'
+      }}
+    >
+      <div style={{ maxWidth: section.settings.fullWidth ? '100%' : (section.settings.maxWidth || tokens.spacing.container), margin: '0 auto', width: section.settings.width || '100%' }}>
         {section.rows.map(row => (
           <div key={row.id} className="flex flex-wrap" style={{ gap: row.gap || tokens.spacing.gap }}>
             {row.columns.map(col => {
@@ -1649,9 +1689,10 @@ function SectionRenderer({ section, tokens, editable, onUpdate, onComponentClick
                     return (
                       <div
                         key={comp.id}
+                        data-component-content
                         onClick={(e) => {
+                          e.stopPropagation();
                           if (editable && onComponentClick) {
-                            e.stopPropagation();
                             onComponentClick(comp.id);
                           }
                         }}

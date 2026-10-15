@@ -112,16 +112,20 @@ export function InlineEditable({
   return (
     <div
       onClick={(e) => {
+        e.preventDefault();
         e.stopPropagation();
         setEditValue(value);
         setIsEditing(true);
       }}
-      className={`${className} cursor-pointer hover:ring-2 hover:ring-indigo-400 hover:ring-offset-2 rounded transition-all relative group`}
-      style={style}
+      onMouseDown={(e) => {
+        e.stopPropagation();
+      }}
+      className={`${className} cursor-text hover:ring-2 hover:ring-indigo-400 hover:ring-offset-2 rounded transition-all relative group`}
+      style={{ ...style, userSelect: 'text', minHeight: '1.5em' }}
       title="Click to edit"
     >
       {value || <span className="text-gray-400 italic">{placeholder}</span>}
-      <div className="absolute -top-6 right-0 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="absolute -top-6 right-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
         <div className="p-1 bg-indigo-500 text-white rounded shadow-lg flex items-center gap-1">
           <Edit3 size={12} />
           <span className="text-xs">Edit</span>
